@@ -1,0 +1,126 @@
+{
+  "projectType": "saas",
+  "projectName": "InsForge",
+  "projectDescription": "AI-optimized Backend-as-a-Service platform with PostgreSQL, authentication, storage, serverless functions, and MCP integration for AI-assisted development.",
+  "theme": "aspen",
+  "primaryColor": "#ffffff",
+  "lightColor": "#7c7c7c",
+  "darkColor": "#080808",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "mcp-setup",
+              "deployment"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/database",
+              "features/authentication",
+              "features/storage",
+              "features/functions",
+              "features/ai-integration",
+              "features/realtime"
+            ]
+          },
+          {
+            "group": "SDKs & Integration",
+            "pages": [
+              "sdks/typescript",
+              "sdks/swift",
+              "sdks/kotlin",
+              "sdks/rest-api",
+              "integration/mcp-tools",
+              "integration/ui-components"
+            ]
+          },
+          {
+            "group": "Platform",
+            "pages": [
+              "platform/architecture",
+              "platform/security",
+              "platform/pricing",
+              "platform/self-hosting"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/examples",
+              "resources/framework-guides",
+              "resources/community",
+              "resources/changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core APIs",
+            "pages": [
+              "api/authentication",
+              "api/database",
+              "api/storage",
+              "api/functions",
+              "api/ai",
+              "api/realtime"
+            ]
+          },
+          {
+            "group": "Management APIs",
+            "pages": [
+              "api/metadata",
+              "api/logs",
+              "api/secrets",
+              "api/health"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "PostgreSQL database with instant REST APIs",
+    "JWT authentication with OAuth providers (Google, GitHub, etc.)",
+    "S3-compatible file storage with bucket management",
+    "Serverless edge functions with Deno runtime",
+    "AI integration with OpenAI-compatible API",
+    "Real-time WebSocket pub/sub messaging",
+    "MCP server for AI agent integration",
+    "Admin dashboard for backend management",
+    "Self-hosted and cloud deployment options"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/register - User registration",
+    "POST /api/auth/login - User authentication",
+    "GET /api/auth/oauth/{provider} - OAuth authentication",
+    "GET /api/tables - List database tables",
+    "POST /api/tables - Create database table",
+    "GET /api/records/{table} - Query table records",
+    "POST /api/records/{table} - Insert records",
+    "GET /api/storage/buckets - List storage buckets",
+    "POST /api/storage/buckets - Create storage bucket",
+    "POST /api/storage/upload - Upload file to bucket",
+    "GET /api/functions - List serverless functions",
+    "POST /api/functions - Deploy serverless function",
+    "POST /api/functions/{name}/invoke - Invoke function",
+    "POST /api/ai/chat/completions - AI chat completions",
+    "POST /api/ai/images/generations - AI image generation",
+    "WebSocket /realtime - Real-time pub/sub connections",
+    "MCP: fetch-docs - Get SDK documentation",
+    "MCP: get-backend-metadata - Get backend configuration",
+    "MCP: run-raw-sql - Execute SQL queries",
+    "MCP: create-bucket - Create storage bucket",
+    "MCP: create-function - Deploy serverless function"
+  ]
+}
