@@ -1,0 +1,358 @@
+---
+title: Framework Integration Guides
+description: Learn how to integrate InsForge with popular frameworks using AI-assisted development
+---
+
+Learn how to build full-stack applications with InsForge and your favorite framework. These guides show you how to use AI tools like Cursor and Claude to generate complete applications with a single prompt.
+
+## How It Works
+
+1. **Create an InsForge project** at [insforge.dev](https://insforge.dev)
+2. **Connect InsForge MCP** to your AI assistant (see [MCP Setup](/mcp-setup))
+3. **Give your AI a prompt** describing what you want to build
+4. **AI generates everything** - database schema, SDK setup, UI components
+
+Your AI assistant can directly interact with your InsForge backend, creating tables, configuring authentication, and generating fully functional code.
+
+## Framework Guides
+
+<CardGroup cols={2}>
+  <Card title="Next.js" icon="react" href="#nextjs">
+    Build server-side rendered apps with TypeScript
+  </Card>
+
+  <Card title="React" icon="react" href="#react">
+    Create single-page apps with Vite
+  </Card>
+
+  <Card title="Vue" icon="vuejs" href="#vue">
+    Develop with the progressive framework
+  </Card>
+
+  <Card title="Nuxt" icon="nuxt" href="#nuxt">
+    Build Vue apps with SSR and SSG
+  </Card>
+
+  <Card title="Svelte" icon="svelte" href="#svelte">
+    Create reactive apps with SvelteKit
+  </Card>
+</CardGroup>
+
+---
+
+## Next.js
+
+Build a Next.js app with InsForge using a single AI prompt.
+
+### Quick Start Prompt
+
+```
+Create a new Next.js app with TypeScript and Tailwind CSS 3.4.
+Install the InsForge SDK and set up the client configuration.
+
+In my InsForge database, create a sports table with id and name columns.
+Add sample data: basketball, soccer, and tennis. Make it publicly readable.
+
+Create a page at /sports that fetches and displays all sports from the database.
+```
+
+### What the AI Generates
+
+**InsForge client configuration:**
+
+```typescript lib/insforge.ts
+import { createClient } from '@insforge/sdk';
+
+export const insforge = createClient({
+  baseUrl: 'https://your-project.us-east.insforge.app',
+  anonKey: 'your-anon-key',
+});
+```
+
+**Server-side data fetching:**
+
+```typescript app/sports/page.tsx
+import { insforge } from '@/lib/insforge';
+
+export default async function SportsPage() {
+  const { data: sports, error } = await insforge.database
+    .from('sports')
+    .select();
+
+  if (error) {
+    return <div className="text-red-600">{error.message}</div>;
+  }
+
+  return (
+    <div className="p-8">
+      <h1 className="text-4xl font-bold mb-8">Sports</h1>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {sports?.map((sport) => (
+          <div key={sport.id} className="p-6 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-semibold">{sport.name}</h2>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Run the App
+
+```bash
+npm run dev
+```
+
+View your app at [http://localhost:3000/sports](http://localhost:3000/sports)
+
+### Extend with More Prompts
+
+```
+Add a form to create new sports and save them to the database.
+Include validation and error handling.
+```
+
+```
+Add user authentication with sign up and login pages.
+Only allow authenticated users to add new sports.
+```
+
+```
+Add images to each sport using InsForge Storage.
+Allow users to upload sport images and display them in the grid.
+```
+
+<Card title="Full Next.js Guide" icon="arrow-right" href="https://github.com/InsForge/insforge/blob/main/docs/examples/framework-guides/nextjs.mdx">
+  View the complete guide in the InsForge repository
+</Card>
+
+---
+
+## React
+
+Build a React app with Vite and InsForge.
+
+### Quick Start Prompt
+
+```
+Create a new React app with TypeScript and Vite.
+Add Tailwind CSS 3.4 for styling.
+Install the InsForge SDK and set up the client configuration.
+
+In my InsForge database, create a sports table with id and name columns.
+Add sample data: basketball, soccer, and tennis. Make it publicly readable.
+
+Create a component that fetches and displays all sports from the database.
+```
+
+### What the AI Generates
+
+**InsForge client configuration:**
+
+```typescript src/lib/insforge.ts
+import { createClient } from '@insforge/sdk';
+
+export const insforge = createClient({
+  baseUrl: 'https://your-project.us-east.insforge.app',
+  anonKey: 'your-anon-key',
+});
+```
+
+**React component with hooks:**
+
+```typescript src/components/Sports.tsx
+import { useEffect, useState } from 'react';
+import { insforge } from '../lib/insforge';
+
+interface Sport {
+  id: string;
+  name: string;
+}
+
+export function Sports() {
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSports() {
+      const { data, error } = await insforge.database
+        .from('sports')
+        .select();
+
+      if (!error) setSports(data || []);
+      setLoading(false);
+    }
+    fetchSports();
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+
+  return (
+    <div className="p-8">
+      <h1 className="text-4xl font-bold mb-8">Sports</h1>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {sports.map((sport) => (
+          <div key={sport.id} className="p-6 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-semibold">{sport.name}</h2>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Run the App
+
+```bash
+npm run dev
+```
+
+View your app at [http://localhost:5173](http://localhost:5173)
+
+<Card title="Full React Guide" icon="arrow-right" href="https://github.com/InsForge/insforge/blob/main/docs/examples/framework-guides/react.mdx">
+  View the complete guide in the InsForge repository
+</Card>
+
+---
+
+## Vue, Nuxt & Svelte
+
+InsForge works with all modern frameworks. The integration pattern is similar:
+
+1. Install the InsForge SDK
+2. Create a client instance with your credentials
+3. Use the SDK methods in your components
+
+<CardGroup cols={3}>
+  <Card title="Vue Guide" icon="vuejs" href="https://github.com/InsForge/insforge/blob/main/docs/examples/framework-guides/vue.mdx">
+    Build with Vue 3 and Composition API
+  </Card>
+
+  <Card title="Nuxt Guide" icon="nuxt" href="https://github.com/InsForge/insforge/blob/main/docs/examples/framework-guides/nuxt.mdx">
+    Server-side rendering with Nuxt 3
+  </Card>
+
+  <Card title="Svelte Guide" icon="svelte" href="https://github.com/InsForge/insforge/blob/main/docs/examples/framework-guides/svelte.mdx">
+    Reactive apps with SvelteKit
+  </Card>
+</CardGroup>
+
+---
+
+## Mobile Development
+
+InsForge provides native SDKs for mobile platforms.
+
+<CardGroup cols={2}>
+  <Card title="Swift SDK" icon="apple" href="/sdks/swift">
+    Build iOS apps with InsForge
+  </Card>
+
+  <Card title="Kotlin SDK" icon="android" href="/sdks/kotlin">
+    Build Android apps with InsForge
+  </Card>
+</CardGroup>
+
+---
+
+## Common Integration Patterns
+
+### Authentication Setup
+
+For framework-specific auth implementations:
+
+<Accordion title="React (Vite + React Router)">
+  Use pre-built auth components for React apps with routing:
+
+  ```bash
+  npm install @insforge/auth-ui-react-router
+  ```
+
+  See [React Router Auth Components](/core-concepts/authentication/ui-components/react-router)
+</Accordion>
+
+<Accordion title="Next.js (App Router)">
+  Use pre-built auth components for Next.js:
+
+  ```bash
+  npm install @insforge/auth-ui-nextjs
+  ```
+
+  See [Next.js Auth Components](/core-concepts/authentication/ui-components/nextjs)
+</Accordion>
+
+<Accordion title="Other Frameworks">
+  Use the core SDK for custom auth implementations:
+
+  ```typescript
+  import { insforge } from './lib/insforge';
+
+  // Sign up
+  const { data, error } = await insforge.auth.signUp({
+    email: 'user@example.com',
+    password: 'password123',
+  });
+
+  // Sign in
+  const { data, error } = await insforge.auth.signIn({
+    email: 'user@example.com',
+    password: 'password123',
+  });
+  ```
+
+  See [Authentication SDK](/core-concepts/authentication/sdk)
+</Accordion>
+
+### Database Operations
+
+All frameworks use the same SDK methods:
+
+```typescript
+// Query data
+const { data, error } = await insforge.database
+  .from('table_name')
+  .select();
+
+// Insert data
+const { data, error } = await insforge.database
+  .from('table_name')
+  .insert([{ column: 'value' }]);
+
+// Update data
+const { data, error } = await insforge.database
+  .from('table_name')
+  .update({ column: 'new_value' })
+  .eq('id', 123);
+```
+
+### File Storage
+
+Upload and download files:
+
+```typescript
+// Upload file
+const { data, error } = await insforge.storage
+  .from('bucket-name')
+  .upload('file-path', file);
+
+// Get public URL
+const { data } = insforge.storage
+  .from('bucket-name')
+  .getPublicUrl('file-path');
+```
+
+---
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card title="Examples" icon="code" href="/resources/examples">
+    View more examples and use cases
+  </Card>
+
+  <Card title="Discord Community" icon="discord" href="https://discord.com/invite/MPxwj5xVvW">
+    Get help from the community
+  </Card>
+</CardGroup>

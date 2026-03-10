@@ -1,0 +1,438 @@
+---
+title: Kotlin SDK
+description: Official Kotlin SDK for building Android and JVM applications with InsForge
+---
+
+The InsForge Kotlin SDK provides native Kotlin support for building Android applications and JVM-based projects with InsForge backend services. It offers a modern Kotlin API with coroutines support and full type safety.
+
+<Note>
+  The Kotlin SDK is currently in development. Use the REST API directly or check back soon for the official Kotlin SDK release.
+</Note>
+
+## Installation
+
+### Gradle (Kotlin DSL)
+
+Add InsForge to your `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("dev.insforge:insforge-kotlin:1.0.0")
+}
+```
+
+### Gradle (Groovy)
+
+Add InsForge to your `build.gradle`:
+
+```groovy
+dependencies {
+    implementation 'dev.insforge:insforge-kotlin:1.0.0'
+}
+```
+
+### Maven
+
+```xml
+<dependency>
+    <groupId>dev.insforge</groupId>
+    <artifactId>insforge-kotlin</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+## Quick Start
+
+### 1. Initialize the Client
+
+Create an InsForge client in your application:
+
+```kotlin
+import dev.insforge.sdk.InsforgeClient
+
+val insforge = InsforgeClient(
+    baseUrl = "https://your-app.region.insforge.app",
+    anonKey = "your-anon-key-here"
+)
+```
+
+### 2. Store Configuration
+
+Use Android's BuildConfig or a configuration class:
+
+```kotlin Config.kt
+object Config {
+    const val INSFORGE_BASE_URL = "https://your-app.region.insforge.app"
+    const val INSFORGE_ANON_KEY = "your-anon-key-here"
+}
+
+val insforge = InsforgeClient(
+    baseUrl = Config.INSFORGE_BASE_URL,
+    anonKey = Config.INSFORGE_ANON_KEY
+)
+```
+
+## Core Features
+
+### Database Operations
+
+Query your PostgreSQL database with type-safe Kotlin APIs:
+
+```kotlin
+// Fetch all posts
+val posts = insforge.database
+    .from("posts")
+    .select()
+    .execute()
+
+// Insert a new post
+data class Post(
+    val title: String,
+    val content: String,
+    val userId: String
+)
+
+val newPost = Post(
+    title = "Hello from Android",
+    content = "Built with InsForge Kotlin SDK",
+    userId = currentUserId
+)
+
+insforge.database
+    .from("posts")
+    .insert(newPost)
+    .execute()
+
+// Update a post
+insforge.database
+    .from("posts")
+    .update(mapOf("title" to "Updated Title"))
+    .eq("id", postId)
+    .execute()
+
+// Delete a post
+insforge.database
+    .from("posts")
+    .delete()
+    .eq("id", postId)
+    .execute()
+```
+
+### Authentication
+
+Implement user authentication in your Android app:
+
+```kotlin
+// Sign up with email and password
+val result = insforge.auth.signUp(
+    email = "user@example.com",
+    password = "secure_password",
+    name = "John Doe"
+)
+
+result.data?.let { data ->
+    println("User created: ${data.user?.email}")
+}
+
+// Sign in
+val session = insforge.auth.signInWithPassword(
+    email = "user@example.com",
+    password = "secure_password"
+)
+
+session.data?.let {
+    println("Access token: ${it.accessToken}")
+}
+
+// Get current session
+val currentSession = insforge.auth.getCurrentSession()
+currentSession.data?.session?.let {
+    println("Logged in as: ${it.user.email}")
+}
+
+// Sign out
+insforge.auth.signOut()
+```
+
+### Storage
+
+Upload and download files from your Android app:
+
+```kotlin
+// Upload an image
+val bitmap: Bitmap = // your bitmap
+val byteArrayOutputStream = ByteArrayOutputStream()
+bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream)
+val imageData = byteArrayOutputStream.toByteArray()
+
+val result = insforge.storage
+    .from("avatars")
+    .upload(
+        path = "user/$userId/avatar.jpg",
+        data = imageData
+    )
+
+println("File URL: ${result.data?.url}")
+
+// Download a file
+val data = insforge.storage
+    .from("avatars")
+    .download(path = "user/$userId/avatar.jpg")
+
+val bitmap = BitmapFactory.decodeByteArray(data.data, 0, data.data!!.size)
+
+// Delete a file
+insforge.storage
+    .from("avatars")
+    .remove(path = "user/$userId/avatar.jpg")
+```
+
+### AI Operations
+
+Integrate AI features in your app:
+
+```kotlin
+// Chat completion
+val completion = insforge.ai.chat.completions.create(
+    model = "anthropic/claude-3.5-haiku",
+    messages = listOf(
+        ChatMessage(role = "user", content = "What is Kotlin?")
+    )
+)
+
+println(completion.choices.firstOrNull()?.message?.content ?: "")
+
+// Image generation
+val imageResult = insforge.ai.images.generate(
+    model = "google/gemini-3-pro-image-preview",
+    prompt = "A beautiful sunset over mountains",
+    size = "1024x1024"
+)
+
+imageResult.data.firstOrNull()?.b64Json?.let { base64 ->
+    val imageBytes = Base64.decode(base64, Base64.DEFAULT)
+    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+}
+```
+
+### Realtime Subscriptions
+
+Listen to real-time events:
+
+```kotlin
+// Connect to realtime server
+insforge.realtime.connect()
+
+// Subscribe to a channel
+insforge.realtime.subscribe(channel = "chat:room-1")
+
+// Listen for messages
+insforge.realtime.on(event = "new_message") { payload ->
+    println("New message: $payload")
+}
+
+// Publish a message
+insforge.realtime.publish(
+    channel = "chat:room-1",
+    event = "new_message",
+    payload = mapOf("text" to "Hello from Android!")
+)
+
+// Disconnect
+insforge.realtime.disconnect()
+```
+
+## Jetpack Compose Integration
+
+Use InsForge with Jetpack Compose:
+
+```kotlin
+import androidx.compose.runtime.*
+import dev.insforge.sdk.InsforgeClient
+
+@Composable
+fun PostsList(insforge: InsforgeClient) {
+    var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(Unit) {
+        isLoading = true
+        try {
+            val result = insforge.database
+                .from("posts")
+                .select()
+                .order("created_at", ascending = false)
+                .limit(20)
+                .execute()
+            
+            posts = result.data ?: emptyList()
+        } catch (e: Exception) {
+            println("Error loading posts: ${e.message}")
+        } finally {
+            isLoading = false
+        }
+    }
+    
+    LazyColumn {
+        items(posts) { post ->
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = post.title,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text(
+                    text = post.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+```
+
+## ViewModel Integration
+
+Use InsForge with Android Architecture Components:
+
+```kotlin
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+class PostsViewModel(private val insforge: InsforgeClient) : ViewModel() {
+    private val _posts = MutableStateFlow<List<Post>>(emptyList())
+    val posts: StateFlow<List<Post>> = _posts
+    
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+    
+    init {
+        loadPosts()
+    }
+    
+    fun loadPosts() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val result = insforge.database
+                    .from("posts")
+                    .select()
+                    .order("created_at", ascending = false)
+                    .execute()
+                
+                _posts.value = result.data ?: emptyList()
+            } catch (e: Exception) {
+                println("Error: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    fun createPost(title: String, content: String) {
+        viewModelScope.launch {
+            try {
+                insforge.database
+                    .from("posts")
+                    .insert(Post(title, content, getCurrentUserId()))
+                    .execute()
+                loadPosts() // Refresh list
+            } catch (e: Exception) {
+                println("Error creating post: ${e.message}")
+            }
+        }
+    }
+}
+```
+
+## Error Handling
+
+Handle errors with Kotlin's Result type:
+
+```kotlin
+try {
+    val result = insforge.database
+        .from("posts")
+        .select()
+        .execute()
+    
+    if (result.error != null) {
+        println("Error: ${result.error.message}")
+    } else {
+        println("Loaded ${result.data?.size} posts")
+    }
+} catch (e: Exception) {
+    when (e) {
+        is InsforgeException.Unauthorized -> {
+            println("User not authenticated")
+        }
+        is InsforgeException.NotFound -> {
+            println("Resource not found")
+        }
+        else -> {
+            println("Error: ${e.message}")
+        }
+    }
+}
+```
+
+## Platform Support
+
+The InsForge Kotlin SDK supports:
+
+- **Android** API 21+
+- **JVM** 1.8+
+- **Kotlin Multiplatform** (coming soon)
+
+## Alternative: REST API
+
+While the Kotlin SDK is in development, you can use the [REST API](/sdks/rest-api) directly with Retrofit or Ktor:
+
+### Using Retrofit
+
+```kotlin
+interface InsforgeApi {
+    @GET("/api/db/posts")
+    suspend fun getPosts(
+        @Header("apikey") anonKey: String
+    ): List<Post>
+    
+    @POST("/api/db/posts")
+    suspend fun createPost(
+        @Header("apikey") anonKey: String,
+        @Body post: Post
+    ): Post
+}
+
+val retrofit = Retrofit.Builder()
+    .baseUrl("https://your-app.region.insforge.app")
+    .addConverterFactory(GsonConverterFactory.create())
+    .build()
+
+val api = retrofit.create(InsforgeApi::class.java)
+
+// Use the API
+val posts = api.getPosts(anonKey = "your-anon-key")
+```
+
+[Learn more about the REST API →](/sdks/rest-api)
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="REST API Reference" icon="code" href="/sdks/rest-api">
+    Use REST API directly while Kotlin SDK is in development
+  </Card>
+  <Card title="Authentication Guide" icon="lock" href="/guides/authentication">
+    Implement auth in your Android app
+  </Card>
+  <Card title="Database Operations" icon="database" href="/guides/database">
+    Work with your PostgreSQL database
+  </Card>
+  <Card title="Example Apps" icon="android" href="https://github.com/InsForge/examples">
+    Browse Kotlin example projects
+  </Card>
+</CardGroup>

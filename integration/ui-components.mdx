@@ -1,0 +1,528 @@
+---
+title: UI Components
+description: Pre-built authentication UI components for React and Next.js applications
+---
+
+InsForge provides pre-built UI components for authentication that work seamlessly with React and Next.js applications. These components handle all the complexity of authentication flows, allowing you to add production-ready auth to your app in minutes.
+
+## Available Packages
+
+<CardGroup cols={2}>
+  <Card title="@insforge/react" icon="react" href="#react-vite">
+    For React + Vite single-page applications
+  </Card>
+  <Card title="@insforge/nextjs" icon="react" href="#nextjs">
+    For Next.js with SSR support
+  </Card>
+</CardGroup>
+
+## React + Vite
+
+Pre-built authentication components for React + Vite applications using **hosted auth pages**.
+
+### Installation
+
+```bash
+npm install @insforge/react@latest
+```
+
+### Setup
+
+#### 1. Environment Variables
+
+```bash .env
+VITE_INSFORGE_BASE_URL=https://your-app.region.insforge.app
+VITE_INSFORGE_ANON_KEY=your-anon-key-here
+```
+
+#### 2. Create Client
+
+```typescript src/lib/insforge.ts
+import { createClient } from '@insforge/sdk';
+
+export const insforge = createClient({
+  baseUrl: import.meta.env.VITE_INSFORGE_BASE_URL,
+  anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY
+});
+```
+
+#### 3. Wrap App with Provider
+
+```tsx src/main.tsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { InsforgeProvider } from '@insforge/react';
+import { insforge } from './lib/insforge';
+import App from './App';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <InsforgeProvider client={insforge}>
+      <App />
+    </InsforgeProvider>
+  </StrictMode>
+);
+```
+
+### Components
+
+#### SignInButton
+
+Button that redirects to hosted sign-in page.
+
+```tsx
+import { SignInButton } from '@insforge/react';
+
+function Header() {
+  return (
+    <header>
+      <SignInButton />
+    </header>
+  );
+}
+```
+
+**Props:**
+- `mode` - `"redirect"` (default) or `"modal"`
+- `redirectUrl` - Custom redirect URL after sign-in
+- `children` - Custom button content
+
+**Example with custom styling:**
+
+```tsx
+<SignInButton>
+  <button className="btn btn-primary">
+    Sign In
+  </button>
+</SignInButton>
+```
+
+---
+
+#### SignUpButton
+
+Button that redirects to hosted sign-up page.
+
+```tsx
+import { SignUpButton } from '@insforge/react';
+
+function Header() {
+  return (
+    <header>
+      <SignUpButton />
+    </header>
+  );
+}
+```
+
+**Props:**
+- `mode` - `"redirect"` (default) or `"modal"`
+- `redirectUrl` - Custom redirect URL after sign-up
+- `children` - Custom button content
+
+---
+
+#### UserButton
+
+Dropdown button displaying user avatar and account options.
+
+```tsx
+import { UserButton } from '@insforge/react';
+
+function Header() {
+  return (
+    <header>
+      <UserButton />
+    </header>
+  );
+}
+```
+
+**Features:**
+- Shows user avatar or initials
+- Dropdown with profile link and sign-out option
+- Fully styled and accessible
+
+---
+
+#### SignedIn / SignedOut
+
+Conditionally render content based on authentication state.
+
+```tsx
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@insforge/react';
+
+function App() {
+  return (
+    <div>
+      <SignedOut>
+        <SignInButton />
+      </SignedOut>
+      
+      <SignedIn>
+        <UserButton />
+        <h1>Welcome back!</h1>
+      </SignedIn>
+    </div>
+  );
+}
+```
+
+### Hooks
+
+#### useAuth()
+
+Access authentication state.
+
+```tsx
+import { useAuth } from '@insforge/react';
+
+function LoginStatus() {
+  const { isSignedIn, isLoaded } = useAuth();
+  
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
+  
+  return (
+    <div>
+      {isSignedIn ? 'Signed in' : 'Signed out'}
+    </div>
+  );
+}
+```
+
+**Returns:**
+- `isSignedIn` (boolean) - Whether user is authenticated
+- `isLoaded` (boolean) - Whether auth state has been loaded
+
+---
+
+#### useUser()
+
+Access current user data.
+
+```tsx
+import { useUser } from '@insforge/react';
+
+function Profile() {
+  const { user, isLoaded } = useUser();
+  
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!user) {
+    return <div>Not signed in</div>;
+  }
+  
+  return (
+    <div>
+      <p>Email: {user.email}</p>
+      <p>Name: {user.profile?.name}</p>
+      <img src={user.profile?.avatar_url} alt="Avatar" />
+    </div>
+  );
+}
+```
+
+**Returns:**
+- `user` (object | null) - User object with `id`, `email`, `profile`
+- `isLoaded` (boolean) - Whether user data has been loaded
+
+**User object structure:**
+
+```typescript
+interface User {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  providers: string[];
+  createdAt: string;
+  updatedAt: string;
+  profile: {
+    name?: string;
+    avatar_url?: string;
+    [key: string]: any; // Custom profile fields
+  };
+  metadata: Record<string, any>;
+}
+```
+
+### Complete Example
+
+```tsx src/App.tsx
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@insforge/react';
+
+function App() {
+  const { user } = useUser();
+  
+  return (
+    <div className="app">
+      <header>
+        <h1>My App</h1>
+        <SignedOut>
+          <SignInButton />
+          <SignUpButton />
+        </SignedOut>
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+      </header>
+      
+      <main>
+        <SignedOut>
+          <div className="hero">
+            <h2>Welcome to My App</h2>
+            <p>Sign in to get started</p>
+            <SignInButton />
+          </div>
+        </SignedOut>
+        
+        <SignedIn>
+          <div className="dashboard">
+            <h2>Welcome back, {user?.profile?.name || user?.email}!</h2>
+            <p>You're signed in and ready to go.</p>
+          </div>
+        </SignedIn>
+      </main>
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
+
+## Next.js
+
+Pre-built authentication components for Next.js with SSR support.
+
+### Installation
+
+```bash
+npm install @insforge/nextjs@latest
+```
+
+### Setup
+
+#### 1. Environment Variables
+
+```bash .env.local
+NEXT_PUBLIC_INSFORGE_BASE_URL=https://your-app.region.insforge.app
+NEXT_PUBLIC_INSFORGE_ANON_KEY=your-anon-key-here
+```
+
+#### 2. Create Client
+
+```typescript lib/insforge.ts
+import { createClient } from '@insforge/sdk';
+
+export const insforge = createClient({
+  baseUrl: process.env.NEXT_PUBLIC_INSFORGE_BASE_URL!,
+  anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!
+});
+```
+
+#### 3. Wrap App with Provider
+
+```tsx app/layout.tsx
+import { InsforgeProvider } from '@insforge/nextjs';
+import { insforge } from '@/lib/insforge';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <InsforgeProvider client={insforge}>
+          {children}
+        </InsforgeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### Components
+
+The Next.js package provides the same components as the React package:
+
+- `SignInButton`
+- `SignUpButton`
+- `UserButton`
+- `SignedIn` / `SignedOut`
+
+**Usage is identical to React:**
+
+```tsx app/page.tsx
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@insforge/nextjs';
+
+export default function Home() {
+  return (
+    <div>
+      <SignedOut>
+        <SignInButton />
+      </SignedOut>
+      <SignedIn>
+        <UserButton />
+      </SignedIn>
+    </div>
+  );
+}
+```
+
+### Server Components
+
+Access user data in Server Components:
+
+```tsx app/dashboard/page.tsx
+import { insforge } from '@/lib/insforge';
+import { cookies } from 'next/headers';
+
+export default async function Dashboard() {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('insforge-access-token')?.value;
+  
+  if (!accessToken) {
+    return <div>Not authenticated</div>;
+  }
+  
+  // Fetch user-specific data
+  const { data: posts } = await insforge.database
+    .from('posts')
+    .select('*')
+    .eq('user_id', userId);
+  
+  return (
+    <div>
+      <h1>My Posts</h1>
+      {posts?.map(post => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+          <p>{post.content}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+```
+
+### Middleware
+
+Protect routes with authentication middleware:
+
+```typescript middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('insforge-access-token');
+  
+  // Redirect to sign-in if not authenticated
+  if (!token) {
+    return NextResponse.redirect(new URL('/sign-in', request.url));
+  }
+  
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/profile/:path*'],
+};
+```
+
+---
+
+## Customization
+
+While the components use hosted auth pages by default, you can customize the authentication experience:
+
+### Custom Redirect URLs
+
+```tsx
+<SignInButton redirectUrl="/dashboard" />
+<SignUpButton redirectUrl="/onboarding" />
+```
+
+### Custom Button Styles
+
+```tsx
+<SignInButton>
+  <button className="custom-btn">
+    🔒 Sign In
+  </button>
+</SignInButton>
+```
+
+### Build Custom Auth Pages
+
+For full control, use the SDK's auth methods directly:
+
+```tsx CustomSignIn.tsx
+import { useState } from 'react';
+import { insforge } from './lib/insforge';
+
+export function CustomSignIn() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const { data, error } = await insforge.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) {
+      console.error('Sign in failed:', error.message);
+    } else {
+      console.log('Signed in:', data.user.email);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+      />
+      <button type="submit">Sign In</button>
+    </form>
+  );
+}
+```
+
+[See full authentication SDK reference →](/sdks/typescript)
+
+---
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="TypeScript SDK" icon="js" href="/sdks/typescript">
+    Full SDK documentation
+  </Card>
+  <Card title="Authentication Guide" icon="lock" href="/sdks/typescript">
+    Auth SDK methods reference
+  </Card>
+  <Card title="Database Operations" icon="database" href="/sdks/typescript">
+    Work with user data
+  </Card>
+  <Card title="Example Apps" icon="code" href="https://github.com/InsForge/examples">
+    Browse example projects
+  </Card>
+</CardGroup>

@@ -1,0 +1,209 @@
+---
+title: Examples & Use Cases
+description: Real-world applications and examples built with InsForge
+---
+
+Explore practical examples and use cases that demonstrate how to build full-stack applications with InsForge.
+
+## Featured Examples
+
+### Sports Directory App
+
+A simple application demonstrating database operations with InsForge.
+
+**Features:**
+- PostgreSQL database with table creation
+- CRUD operations using InsForge SDK
+- Public read access with Row Level Security
+- Responsive UI with Tailwind CSS
+
+**Implementation:**
+```typescript
+import { createClient } from '@insforge/sdk';
+
+const insforge = createClient({
+  baseUrl: 'https://your-project.us-east.insforge.app',
+  anonKey: 'your-anon-key',
+});
+
+// Fetch all sports
+const { data, error } = await insforge.database
+  .from('sports')
+  .select();
+```
+
+### OAuth Integration
+
+Example implementation of third-party authentication with InsForge.
+
+**Supported Providers:**
+- Google OAuth
+- GitHub OAuth
+- Microsoft, LinkedIn, Facebook, Discord
+- Apple Sign In
+
+**Frontend Implementation:**
+```html
+<!-- OAuth login button -->
+<button onclick="handleOAuthLogin('google')">
+  Sign in with Google
+</button>
+
+<script>
+function handleOAuthLogin(provider) {
+  const authUrl = `https://your-project.us-east.insforge.app/auth/oauth/${provider}`;
+  window.location.href = authUrl;
+}
+</script>
+```
+
+View the complete OAuth frontend example at `examples/oauth/frontend-oauth-example.html` in the [InsForge repository](https://github.com/InsForge/insforge/tree/main/examples/oauth).
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="SaaS Application">
+    Build a complete SaaS platform with:
+    - User authentication and profiles
+    - Multi-tenant database architecture
+    - File storage for user uploads
+    - AI-powered features
+    - Real-time collaboration
+
+    **Key InsForge Features:**
+    - PostgreSQL with RLS policies for data isolation
+    - Better Auth for user management
+    - S3-compatible storage
+    - Model Gateway for AI integration
+    - WebSocket-based real-time module
+  </Accordion>
+
+  <Accordion title="E-commerce Platform">
+    Create an online store with:
+    - Product catalog and inventory
+    - Shopping cart and checkout
+    - User accounts and order history
+    - Image storage for products
+    - Payment processing
+
+    **Key InsForge Features:**
+    - Database for products, orders, and users
+    - Storage for product images
+    - Authentication for user accounts
+    - Edge Functions for business logic
+  </Accordion>
+
+  <Accordion title="Social Media App">
+    Build a social platform with:
+    - User profiles and authentication
+    - Posts, comments, and reactions
+    - Real-time notifications
+    - Image and video uploads
+    - AI content moderation
+
+    **Key InsForge Features:**
+    - Real-time pub/sub for live updates
+    - Storage for media files
+    - Database with relationships
+    - AI integration for content analysis
+  </Accordion>
+
+  <Accordion title="AI-Powered Application">
+    Develop AI-native apps with:
+    - Chat interfaces with streaming
+    - Image generation
+    - Document analysis
+    - RAG (Retrieval-Augmented Generation)
+
+    **Key InsForge Features:**
+    - Model Gateway with OpenAI-compatible API
+    - Multiple LLM providers (OpenAI, Anthropic, etc.)
+    - Database for chat history and embeddings
+    - Storage for generated content
+  </Accordion>
+
+  <Accordion title="Real-time Collaboration Tool">
+    Create collaborative experiences with:
+    - Live cursors and presence
+    - Shared document editing
+    - Chat and messaging
+    - Activity feeds
+
+    **Key InsForge Features:**
+    - Real-time module with WebSocket channels
+    - Message history and replay
+    - RLS-based permissions
+    - Database for persistent state
+  </Accordion>
+
+  <Accordion title="Mobile Backend">
+    Power mobile apps with:
+    - REST and real-time APIs
+    - Push notifications
+    - Offline sync
+    - File uploads
+
+    **Key InsForge Features:**
+    - Swift SDK for iOS
+    - Kotlin SDK for Android
+    - Real-time subscriptions
+    - S3-compatible storage
+  </Accordion>
+</AccordionGroup>
+
+## API Response Examples
+
+InsForge APIs follow a consistent response format. View detailed examples for all endpoints in the [response examples documentation](https://github.com/InsForge/insforge/blob/main/examples/response-examples.md).
+
+### Success Response
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "123",
+      "email": "user@example.com"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  },
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Invalid credentials"
+  },
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+## Community Showcase
+
+Explore real-world projects built by the InsForge community.
+
+<Card title="View Community Projects" icon="star" href="/showcase">
+  Browse applications built with InsForge by developers around the world
+</Card>
+
+## Get Started
+
+Ready to build your own application?
+
+<CardGroup cols={2}>
+  <Card title="Framework Guides" icon="code" href="/resources/framework-guides">
+    Step-by-step guides for Next.js, React, Vue, and more
+  </Card>
+
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get up and running in 5 minutes
+  </Card>
+</CardGroup>

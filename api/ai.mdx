@@ -1,0 +1,629 @@
+---
+title: AI API
+description: OpenRouter-powered AI services for chat completions, image generation, and embeddings
+---
+
+The AI API provides OpenAI-compatible endpoints for chat completions, image generation, and embeddings, powered by OpenRouter with support for multiple AI providers.
+
+## Base URL
+
+All AI endpoints are prefixed with `/api/ai`
+
+---
+
+## Chat Completions
+
+### Generate Chat Completion
+
+<CodeGroup>
+```bash POST /api/ai/chat/completion
+curl -X POST https://your-app.region.insforge.app/api/ai/chat/completion \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the capital of France?"
+      }
+    ],
+    "temperature": 0.7,
+    "maxTokens": 1000
+  }'
+```
+</CodeGroup>
+
+Generate chat completion with any supported model.
+
+**Body Parameters**
+
+<ParamField body="model" type="string" required>
+  OpenRouter model identifier (e.g., "openai/gpt-4", "anthropic/claude-3-opus")
+</ParamField>
+<ParamField body="messages" type="array" required>
+  Array of message objects
+  <Expandable title="Message properties">
+    <ParamField body="role" type="string" required>
+      Message role: `user`, `assistant`, `system`, or `tool`
+    </ParamField>
+    <ParamField body="content" type="string">
+      Message content (nullable for assistant messages with tool_calls)
+    </ParamField>
+    <ParamField body="tool_calls" type="array">
+      Tool calls made by assistant (assistant messages only)
+    </ParamField>
+    <ParamField body="tool_call_id" type="string">
+      ID of tool call being responded to (tool messages only)
+    </ParamField>
+  </Expandable>
+</ParamField>
+<ParamField body="stream" type="boolean" default="false">
+  Enable streaming response via Server-Sent Events
+</ParamField>
+<ParamField body="temperature" type="number">
+  Controls randomness (0-2)
+</ParamField>
+<ParamField body="maxTokens" type="integer">
+  Maximum tokens to generate
+</ParamField>
+<ParamField body="topP" type="number">
+  Nucleus sampling parameter (0-1)
+</ParamField>
+<ParamField body="systemPrompt" type="string">
+  System prompt to guide model behavior
+</ParamField>
+<ParamField body="thinking" type="boolean">
+  Enable extended reasoning (appends :thinking to model ID, Anthropic models only)
+</ParamField>
+<ParamField body="webSearch" type="object">
+  Enable web search integration
+  <Expandable title="Web search properties">
+    <ParamField body="enabled" type="boolean" required>
+      Enable web search
+    </ParamField>
+    <ParamField body="engine" type="string">
+      Search engine: `native` (provider built-in), `exa` (Exa API), or undefined (auto-select)
+    </ParamField>
+    <ParamField body="maxResults" type="integer" default="5">
+      Maximum search results (1-10)
+    </ParamField>
+    <ParamField body="searchPrompt" type="string">
+      Custom prompt for search results
+    </ParamField>
+  </Expandable>
+</ParamField>
+<ParamField body="fileParser" type="object">
+  Enable PDF file parsing
+  <Expandable title="File parser properties">
+    <ParamField body="enabled" type="boolean" required>
+      Enable file parsing
+    </ParamField>
+    <ParamField body="pdf.engine" type="string">
+      PDF engine: `pdf-text` (free), `mistral-ocr` ($2/1000 pages), or `native` (charged as tokens)
+    </ParamField>
+  </Expandable>
+</ParamField>
+<ParamField body="tools" type="array">
+  Tool definitions for function calling
+</ParamField>
+<ParamField body="toolChoice" type="string | object">
+  Tool usage control: `auto`, `none`, `required`, or specific function
+</ParamField>
+<ParamField body="parallelToolCalls" type="boolean">
+  Allow parallel tool calls
+</ParamField>
+
+**Response**
+
+<ResponseField name="text" type="string">
+  AI model response content
+</ResponseField>
+<ResponseField name="tool_calls" type="array">
+  Tool calls requested by model (when using function calling)
+</ResponseField>
+<ResponseField name="annotations" type="array">
+  URL citations from web search results
+</ResponseField>
+<ResponseField name="metadata" type="object">
+  Response metadata
+  <Expandable title="properties">
+    <ResponseField name="model" type="string">
+      Model used for generation
+    </ResponseField>
+    <ResponseField name="usage" type="object">
+      Token usage information
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseExample>
+```json Basic Response
+{
+  "text": "The capital of France is Paris. It's located in the north-central part of the country on the Seine River.",
+  "metadata": {
+    "model": "openai/gpt-4",
+    "usage": {
+      "promptTokens": 15,
+      "completionTokens": 28,
+      "totalTokens": 43
+    }
+  }
+}
+```
+
+```json With Web Search
+{
+  "text": "According to recent reports, the Eiffel Tower receives approximately 7 million visitors annually, making it one of the most visited paid monuments in the world.",
+  "annotations": [
+    {
+      "type": "url_citation",
+      "urlCitation": {
+        "url": "https://example.com/eiffel-tower-facts",
+        "title": "Eiffel Tower Facts and Statistics",
+        "content": "The Eiffel Tower welcomes about 7 million visitors each year...",
+        "startIndex": 0,
+        "endIndex": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model": "openai/gpt-4",
+    "usage": {
+      "promptTokens": 50,
+      "completionTokens": 45,
+      "totalTokens": 95
+    }
+  }
+}
+```
+
+```json With Function Calling
+{
+  "text": null,
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "arguments": "{\"location\":\"Paris\"}"
+      }
+    }
+  ],
+  "metadata": {
+    "model": "openai/gpt-4",
+    "usage": {
+      "promptTokens": 45,
+      "completionTokens": 15,
+      "totalTokens": 60
+    }
+  }
+}
+```
+</ResponseExample>
+
+### Streaming Chat Completion
+
+<CodeGroup>
+```bash POST /api/ai/chat/completion (Streaming)
+curl -X POST https://your-app.region.insforge.app/api/ai/chat/completion \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [{"role": "user", "content": "Tell me a story"}],
+    "stream": true
+  }'
+```
+</CodeGroup>
+
+Set `stream: true` to receive Server-Sent Events (SSE) for real-time token streaming.
+
+**Response Format**
+
+```text
+data: {"text": "Once", "done": false}
+
+data: {"text": " upon", "done": false}
+
+data: {"text": " a", "done": false}
+
+data: {"text": " time", "done": false}
+
+data: {"done": true, "metadata": {"usage": {...}}}
+```
+
+---
+
+## Image Generation
+
+### Generate Images
+
+<CodeGroup>
+```bash POST /api/ai/image/generation
+curl -X POST https://your-app.region.insforge.app/api/ai/image/generation \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/dall-e-3",
+    "prompt": "A serene landscape with mountains and a lake at sunset, photorealistic style"
+  }'
+```
+</CodeGroup>
+
+Generate images using AI models.
+
+**Body Parameters**
+
+<ParamField body="model" type="string" required>
+  Image generation model (e.g., "openai/dall-e-3", "stability-ai/stable-diffusion-xl")
+</ParamField>
+<ParamField body="prompt" type="string" required>
+  Text description of desired image
+</ParamField>
+
+**Response**
+
+<ResponseField name="model" type="string">
+  Model used for generation
+</ResponseField>
+<ResponseField name="images" type="array">
+  Generated images (URLs or base64 data)
+</ResponseField>
+<ResponseField name="text" type="string">
+  Text content from multimodal models
+</ResponseField>
+<ResponseField name="count" type="integer">
+  Number of images generated
+</ResponseField>
+<ResponseField name="metadata" type="object">
+  Generation metadata including usage
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "model": "openai/dall-e-3",
+  "images": [
+    {
+      "type": "image_url",
+      "image_url": {
+        "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/..."
+      }
+    }
+  ],
+  "count": 1,
+  "metadata": {
+    "model": "openai/dall-e-3",
+    "revisedPrompt": "A photorealistic image of a serene mountain landscape...",
+    "usage": {
+      "promptTokens": 12,
+      "completionTokens": 0,
+      "totalTokens": 12
+    }
+  },
+  "nextActions": "Images have been generated successfully. Use the returned URLs to access them."
+}
+```
+</ResponseExample>
+
+---
+
+## Embeddings
+
+### Generate Embeddings
+
+<CodeGroup>
+```bash POST /api/ai/embeddings
+curl -X POST https://your-app.region.insforge.app/api/ai/embeddings \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/text-embedding-ada-002",
+    "input": "Hello world"
+  }'
+```
+</CodeGroup>
+
+Generate vector embeddings for text.
+
+**Body Parameters**
+
+<ParamField body="model" type="string" required>
+  Embedding model identifier (e.g., "openai/text-embedding-ada-002", "google/gemini-embedding-001")
+</ParamField>
+<ParamField body="input" type="string | array" required>
+  Single text string or array of strings to embed
+</ParamField>
+<ParamField body="encoding_format" type="string" default="float">
+  Format: `float` or `base64`
+</ParamField>
+<ParamField body="dimensions" type="integer">
+  Number of dimensions (model-specific)
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json Single Input
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "embedding": [
+        0.0023064255,
+        -0.009327292,
+        0.015797347,
+        // ... 1536 dimensions total
+      ],
+      "index": 0
+    }
+  ],
+  "metadata": {
+    "model": "text-embedding-ada-002",
+    "usage": {
+      "promptTokens": 2,
+      "completionTokens": 0,
+      "totalTokens": 2
+    }
+  }
+}
+```
+
+```json Multiple Inputs
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "embedding": [0.0023064255, -0.009327292, ...],
+      "index": 0
+    },
+    {
+      "object": "embedding",
+      "embedding": [0.0015234123, -0.012456789, ...],
+      "index": 1
+    }
+  ],
+  "metadata": {
+    "model": "text-embedding-ada-002",
+    "usage": {
+      "promptTokens": 8,
+      "completionTokens": 0,
+      "totalTokens": 8
+    }
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## Model Management
+
+### List Available Models
+
+<CodeGroup>
+```bash GET /api/ai/models
+curl https://your-app.region.insforge.app/api/ai/models \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get all available text and image models from OpenRouter (admin only).
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "text": [
+    {
+      "provider": "openrouter",
+      "configured": true,
+      "models": [
+        {
+          "id": "openai/gpt-4",
+          "name": "GPT-4",
+          "created": 1687882411,
+          "description": "GPT-4 by OpenAI",
+          "context_length": 8192,
+          "pricing": {
+            "prompt": "0.00003",
+            "completion": "0.00006"
+          },
+          "architecture": {
+            "input_modalities": ["text"],
+            "output_modalities": ["text"]
+          }
+        }
+      ]
+    }
+  ],
+  "image": [
+    {
+      "provider": "openrouter",
+      "configured": true,
+      "models": [
+        {
+          "id": "openai/dall-e-3",
+          "name": "DALL-E 3",
+          "description": "Image generation by OpenAI",
+          "pricing": {
+            "image": "0.04"
+          },
+          "architecture": {
+            "input_modalities": ["text"],
+            "output_modalities": ["image"]
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+</ResponseExample>
+
+### Get Remaining Credits
+
+<CodeGroup>
+```bash GET /api/ai/credits
+curl https://your-app.region.insforge.app/api/ai/credits \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get remaining credits from OpenRouter (admin only).
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "credits": 25.50,
+  "usage": 74.50
+}
+```
+</ResponseExample>
+
+---
+
+## AI Configuration (Admin)
+
+### Create AI Configuration
+
+<CodeGroup>
+```bash POST /api/ai/configurations
+curl -X POST https://your-app.region.insforge.app/api/ai/configurations \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "inputModality": ["text"],
+    "outputModality": ["text"],
+    "provider": "openrouter",
+    "modelId": "openai/gpt-4",
+    "systemPrompt": "You are a helpful assistant."
+  }'
+```
+</CodeGroup>
+
+Create AI configuration (admin only).
+
+**Body Parameters**
+
+<ParamField body="inputModality" type="array" required>
+  Input types: `["text"]`, `["image"]`, or both
+</ParamField>
+<ParamField body="outputModality" type="array" required>
+  Output types: `["text"]`, `["image"]`, or both
+</ParamField>
+<ParamField body="provider" type="string" required>
+  Provider name (e.g., "openrouter")
+</ParamField>
+<ParamField body="modelId" type="string" required>
+  Model identifier
+</ParamField>
+<ParamField body="systemPrompt" type="string">
+  System prompt for configuration
+</ParamField>
+
+### List AI Configurations
+
+<CodeGroup>
+```bash GET /api/ai/configurations
+curl https://your-app.region.insforge.app/api/ai/configurations \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get all AI configurations (admin only).
+
+### Update AI Configuration
+
+<CodeGroup>
+```bash PATCH /api/ai/configurations/{id}
+curl -X PATCH https://your-app.region.insforge.app/api/ai/configurations/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "systemPrompt": "You are a helpful coding assistant."
+  }'
+```
+</CodeGroup>
+
+Update configuration system prompt (admin only).
+
+### Delete AI Configuration
+
+<CodeGroup>
+```bash DELETE /api/ai/configurations/{id}
+curl -X DELETE https://your-app.region.insforge.app/api/ai/configurations/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Delete AI configuration (admin only).
+
+---
+
+## Usage Tracking
+
+### Get Usage Summary
+
+<CodeGroup>
+```bash GET /api/ai/usage/summary
+curl "https://your-app.region.insforge.app/api/ai/usage/summary?startDate=2024-01-01T00:00:00Z&endDate=2024-01-31T23:59:59Z" \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get AI usage summary statistics (admin only).
+
+**Query Parameters**
+
+<ParamField query="configId" type="string">
+  Filter by configuration ID
+</ParamField>
+<ParamField query="startDate" type="string">
+  Start date (ISO 8601)
+</ParamField>
+<ParamField query="endDate" type="string">
+  End date (ISO 8601)
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "totalRequests": 1250,
+  "totalTokens": 45000,
+  "totalCost": 12.50,
+  "byModel": {
+    "openai/gpt-4": {
+      "requests": 800,
+      "tokens": 35000,
+      "cost": 10.50
+    },
+    "openai/gpt-3.5-turbo": {
+      "requests": 450,
+      "tokens": 10000,
+      "cost": 2.00
+    }
+  }
+}
+```
+</ResponseExample>
+
+### Get Usage Records
+
+<CodeGroup>
+```bash GET /api/ai/usage
+curl "https://your-app.region.insforge.app/api/ai/usage?limit=50&offset=0" \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get detailed usage records with pagination (admin only).

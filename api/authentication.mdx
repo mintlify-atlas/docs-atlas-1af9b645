@@ -1,0 +1,751 @@
+---
+title: Authentication API
+description: Comprehensive authentication endpoints including email/password, OAuth, and session management
+---
+
+The Authentication API provides secure user authentication with support for email/password registration, OAuth providers, email verification, password resets, and session management.
+
+## Base URL
+
+All authentication endpoints are prefixed with `/api/auth`
+
+---
+
+## Public Configuration
+
+### Get Public Auth Config
+
+<CodeGroup>
+```bash GET /api/auth/public-config
+curl https://your-app.region.insforge.app/api/auth/public-config
+```
+</CodeGroup>
+
+Retrieve public authentication configuration including OAuth providers and password requirements.
+
+**Response**
+
+<ResponseField name="oAuthProviders" type="array">
+  List of configured OAuth providers
+  <Expandable title="properties">
+    <ResponseField name="provider" type="string">
+      OAuth provider name (google, github, discord, linkedin, facebook, instagram, tiktok, apple, x, spotify, microsoft)
+    </ResponseField>
+    <ResponseField name="useSharedKey" type="boolean">
+      Whether using InsForge shared OAuth keys
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+<ResponseField name="requireEmailVerification" type="boolean">
+  Whether email verification is required before login
+</ResponseField>
+<ResponseField name="passwordMinLength" type="integer">
+  Minimum password length (4-128)
+</ResponseField>
+<ResponseField name="requireNumber" type="boolean">
+  Whether passwords must contain a number
+</ResponseField>
+<ResponseField name="requireLowercase" type="boolean">
+  Whether passwords must contain lowercase letters
+</ResponseField>
+<ResponseField name="requireUppercase" type="boolean">
+  Whether passwords must contain uppercase letters
+</ResponseField>
+<ResponseField name="requireSpecialChar" type="boolean">
+  Whether passwords must contain special characters
+</ResponseField>
+<ResponseField name="verifyEmailMethod" type="string">
+  Email verification method: `code` (6-digit OTP) or `link` (magic link)
+</ResponseField>
+<ResponseField name="resetPasswordMethod" type="string">
+  Password reset method: `code` (6-digit OTP + exchange) or `link` (magic link)
+</ResponseField>
+
+<ResponseExample>
+```json Example Response
+{
+  "oAuthProviders": [
+    {
+      "provider": "google",
+      "useSharedKey": true
+    },
+    {
+      "provider": "github",
+      "useSharedKey": false
+    }
+  ],
+  "requireEmailVerification": true,
+  "passwordMinLength": 8,
+  "requireNumber": true,
+  "requireLowercase": true,
+  "requireUppercase": false,
+  "requireSpecialChar": false,
+  "verifyEmailMethod": "code",
+  "resetPasswordMethod": "link"
+}
+```
+</ResponseExample>
+
+---
+
+## User Registration & Login
+
+### Register New User
+
+<CodeGroup>
+```bash POST /api/auth/users
+curl -X POST https://your-app.region.insforge.app/api/auth/users?client_type=web \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123",
+    "name": "John Doe"
+  }'
+```
+</CodeGroup>
+
+Create a new user account with email and password.
+
+**Query Parameters**
+
+<ParamField query="client_type" type="string" default="web">
+  Client type determines token delivery:
+  - `web`: Refresh token in httpOnly cookie, csrfToken in response
+  - `mobile`/`desktop`: refreshToken in response body
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="email" type="string" required>
+  User's email address
+</ParamField>
+<ParamField body="password" type="string" required>
+  Password meeting configured requirements
+</ParamField>
+<ParamField body="name" type="string">
+  User's display name
+</ParamField>
+
+**Response**
+
+<ResponseField name="user" type="object">
+  User object with profile information
+</ResponseField>
+<ResponseField name="accessToken" type="string">
+  JWT authentication token (null if email verification required)
+</ResponseField>
+<ResponseField name="csrfToken" type="string">
+  CSRF token for refresh endpoint (web clients only)
+</ResponseField>
+<ResponseField name="refreshToken" type="string">
+  Refresh token (mobile/desktop clients only)
+</ResponseField>
+<ResponseField name="requireEmailVerification" type="boolean">
+  Whether email verification is required before login
+</ResponseField>
+
+<ResponseExample>
+```json Email Verification Required
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "profile": {
+      "name": "John Doe"
+    },
+    "emailVerified": false,
+    "providers": ["email"],
+    "createdAt": "2024-01-15T10:30:00Z"
+  },
+  "accessToken": null,
+  "csrfToken": null,
+  "refreshToken": null,
+  "requireEmailVerification": true
+}
+```
+
+```json Registration Complete (No Verification)
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "profile": {
+      "name": "John Doe"
+    },
+    "emailVerified": false,
+    "providers": ["email"],
+    "createdAt": "2024-01-15T10:30:00Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "csrfToken": "abc123def456",
+  "requireEmailVerification": false
+}
+```
+</ResponseExample>
+
+### User Login
+
+<CodeGroup>
+```bash POST /api/auth/sessions
+curl -X POST https://your-app.region.insforge.app/api/auth/sessions?client_type=web \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securePassword123"
+  }'
+```
+</CodeGroup>
+
+Authenticate user and return access token.
+
+**Query Parameters**
+
+<ParamField query="client_type" type="string" default="web">
+  Client type: `web`, `mobile`, or `desktop`
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="email" type="string" required>
+  User's email address
+</ParamField>
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+**Response**
+
+<ResponseField name="user" type="object">
+  User object with profile information
+</ResponseField>
+<ResponseField name="accessToken" type="string">
+  JWT authentication token
+</ResponseField>
+<ResponseField name="csrfToken" type="string">
+  CSRF token (web clients only)
+</ResponseField>
+<ResponseField name="refreshToken" type="string">
+  Refresh token (mobile/desktop clients only)
+</ResponseField>
+<ResponseField name="redirectTo" type="string">
+  Optional URL to redirect after login
+</ResponseField>
+
+<ResponseExample>
+```json Success Response
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "profile": {
+      "name": "John Doe",
+      "avatar_url": "https://example.com/avatar.jpg"
+    },
+    "emailVerified": true,
+    "providers": ["email"],
+    "createdAt": "2024-01-15T10:30:00Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "csrfToken": "abc123def456"
+}
+```
+</ResponseExample>
+
+### Refresh Access Token
+
+<CodeGroup>
+```bash POST /api/auth/refresh (Web)
+curl -X POST https://your-app.region.insforge.app/api/auth/refresh?client_type=web \
+  -H "X-CSRF-Token: abc123def456" \
+  -H "Cookie: refreshToken=..." \
+  -H "Content-Type: application/json"
+```
+
+```bash POST /api/auth/refresh (Mobile/Desktop)
+curl -X POST https://your-app.region.insforge.app/api/auth/refresh?client_type=mobile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "your-refresh-token"
+  }'
+```
+</CodeGroup>
+
+Refresh access token using refresh token.
+
+**Query Parameters**
+
+<ParamField query="client_type" type="string" default="web">
+  Client type: `web` (uses cookie + CSRF), `mobile`/`desktop` (uses body)
+</ParamField>
+
+**Headers (Web clients only)**
+
+<ParamField header="X-CSRF-Token" type="string" required>
+  CSRF token from login/register response
+</ParamField>
+
+**Body Parameters (Mobile/Desktop only)**
+
+<ParamField body="refreshToken" type="string" required>
+  Refresh token from previous authentication
+</ParamField>
+
+**Response**
+
+<ResponseField name="user" type="object">
+  User object
+</ResponseField>
+<ResponseField name="accessToken" type="string">
+  New JWT access token
+</ResponseField>
+<ResponseField name="csrfToken" type="string">
+  New CSRF token (web clients)
+</ResponseField>
+<ResponseField name="refreshToken" type="string">
+  New refresh token (mobile/desktop clients - must replace old token)
+</ResponseField>
+
+### Logout
+
+<CodeGroup>
+```bash POST /api/auth/logout
+curl -X POST https://your-app.region.insforge.app/api/auth/logout
+```
+</CodeGroup>
+
+Logout user and clear refresh token cookie.
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+</ResponseExample>
+
+### Get Current User
+
+<CodeGroup>
+```bash GET /api/auth/sessions/current
+curl https://your-app.region.insforge.app/api/auth/sessions/current \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get currently authenticated user info from JWT token.
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "user@example.com",
+    "role": "authenticated"
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## Email Verification
+
+### Send Verification Email
+
+<CodeGroup>
+```bash POST /api/auth/email/send-verification
+curl -X POST https://your-app.region.insforge.app/api/auth/email/send-verification \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com"
+  }'
+```
+</CodeGroup>
+
+Send email verification code or link based on configuration.
+
+**Body Parameters**
+
+<ParamField body="email" type="string" required>
+  Email address to verify
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "message": "If your email is registered, we have sent you a verification code. Please check your inbox."
+}
+```
+</ResponseExample>
+
+### Verify Email
+
+<CodeGroup>
+```bash POST /api/auth/email/verify (Code)
+curl -X POST https://your-app.region.insforge.app/api/auth/email/verify?client_type=web \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "otp": "123456"
+  }'
+```
+
+```bash POST /api/auth/email/verify (Link)
+curl -X POST https://your-app.region.insforge.app/api/auth/email/verify?client_type=web \
+  -H "Content-Type: application/json" \
+  -d '{
+    "otp": "a1b2c3d4e5f6..."
+  }'
+```
+</CodeGroup>
+
+Verify email with code or token.
+
+**Body Parameters**
+
+<ParamField body="email" type="string">
+  Email address (required for code verification, omit for link verification)
+</ParamField>
+<ParamField body="otp" type="string" required>
+  6-digit code or 64-character hex token from magic link
+</ParamField>
+
+**Response**
+
+<ResponseField name="user" type="object">
+  User object
+</ResponseField>
+<ResponseField name="accessToken" type="string">
+  JWT authentication token
+</ResponseField>
+<ResponseField name="csrfToken" type="string">
+  CSRF token (web clients)
+</ResponseField>
+<ResponseField name="refreshToken" type="string">
+  Refresh token (mobile/desktop clients)
+</ResponseField>
+
+---
+
+## Password Reset
+
+### Send Password Reset
+
+<CodeGroup>
+```bash POST /api/auth/email/send-reset-password
+curl -X POST https://your-app.region.insforge.app/api/auth/email/send-reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com"
+  }'
+```
+</CodeGroup>
+
+Send password reset code or link.
+
+**Body Parameters**
+
+<ParamField body="email" type="string" required>
+  Email address for password reset
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "message": "If your email is registered, we have sent you a password reset link. Please check your inbox."
+}
+```
+</ResponseExample>
+
+### Exchange Reset Code for Token
+
+<CodeGroup>
+```bash POST /api/auth/email/exchange-reset-password-token
+curl -X POST https://your-app.region.insforge.app/api/auth/email/exchange-reset-password-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "code": "123456"
+  }'
+```
+</CodeGroup>
+
+Exchange 6-digit code for reset token (code method only).
+
+**Body Parameters**
+
+<ParamField body="email" type="string" required>
+  User's email address
+</ParamField>
+<ParamField body="code" type="string" required>
+  6-digit code from email
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "token": "a1b2c3d4e5f6...",
+  "expiresAt": "2024-01-15T11:30:00Z"
+}
+```
+</ResponseExample>
+
+### Reset Password
+
+<CodeGroup>
+```bash POST /api/auth/email/reset-password
+curl -X POST https://your-app.region.insforge.app/api/auth/email/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "newPassword": "newSecurePassword123",
+    "otp": "a1b2c3d4e5f6..."
+  }'
+```
+</CodeGroup>
+
+Reset password with token.
+
+**Body Parameters**
+
+<ParamField body="newPassword" type="string" required>
+  New password meeting requirements
+</ParamField>
+<ParamField body="otp" type="string" required>
+  Reset token from magic link or exchange endpoint
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+</ResponseExample>
+
+---
+
+## User Profiles
+
+### Get User Profile by ID
+
+<CodeGroup>
+```bash GET /api/auth/profiles/{userId}
+curl https://your-app.region.insforge.app/api/auth/profiles/550e8400-e29b-41d4-a716-446655440000
+```
+</CodeGroup>
+
+Get public profile for any user (no authentication required).
+
+**Path Parameters**
+
+<ParamField path="userId" type="string" required>
+  User UUID
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "profile": {
+    "name": "John Doe",
+    "avatar_url": "https://example.com/avatar.jpg"
+  }
+}
+```
+</ResponseExample>
+
+### Update Current User Profile
+
+<CodeGroup>
+```bash PATCH /api/auth/profiles/current
+curl -X PATCH https://your-app.region.insforge.app/api/auth/profiles/current \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "profile": {
+      "name": "Jane Doe",
+      "avatar_url": "https://example.com/new-avatar.jpg",
+      "bio": "Software developer"
+    }
+  }'
+```
+</CodeGroup>
+
+Update authenticated user's profile.
+
+**Body Parameters**
+
+<ParamField body="profile" type="object" required>
+  Profile data including name, avatar_url, and custom fields
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "profile": {
+    "name": "Jane Doe",
+    "avatar_url": "https://example.com/new-avatar.jpg",
+    "bio": "Software developer"
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## OAuth Authentication
+
+### Initiate OAuth Flow
+
+<CodeGroup>
+```bash GET /api/auth/oauth/{provider}
+curl "https://your-app.region.insforge.app/api/auth/oauth/google?redirect_uri=https://myapp.com/callback&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+```
+</CodeGroup>
+
+Generate OAuth authorization URL with PKCE support.
+
+**Path Parameters**
+
+<ParamField path="provider" type="string" required>
+  OAuth provider: google, github, discord, linkedin, facebook, instagram, tiktok, apple, x, spotify, microsoft
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="redirect_uri" type="string" required>
+  URL to redirect after authentication (receives insforge_code parameter)
+</ParamField>
+<ParamField query="code_challenge" type="string">
+  PKCE code challenge (Base64URL(SHA256(code_verifier))) for mobile/desktop apps
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "authUrl": "https://accounts.google.com/o/oauth2/v2/auth?client_id=...&redirect_uri=...&response_type=code&scope=openid+email+profile&state=..."
+}
+```
+</ResponseExample>
+
+### Exchange OAuth Code
+
+<CodeGroup>
+```bash POST /api/auth/oauth/exchange
+curl -X POST https://your-app.region.insforge.app/api/auth/oauth/exchange \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "insforge_code_received_from_callback",
+    "code_verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+  }'
+```
+</CodeGroup>
+
+Exchange insforge_code for access and refresh tokens (PKCE flow).
+
+**Body Parameters**
+
+<ParamField body="code" type="string" required>
+  insforge_code from OAuth callback redirect
+</ParamField>
+<ParamField body="code_verifier" type="string" required>
+  Original code_verifier (43-128 characters)
+</ParamField>
+
+**Response**
+
+<ResponseField name="user" type="object">
+  User object
+</ResponseField>
+<ResponseField name="accessToken" type="string">
+  JWT access token
+</ResponseField>
+<ResponseField name="refreshToken" type="string">
+  Refresh token
+</ResponseField>
+
+---
+
+## Admin Endpoints
+
+### Admin Login
+
+<CodeGroup>
+```bash POST /api/auth/admin/sessions
+curl -X POST https://your-app.region.insforge.app/api/auth/admin/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "adminPassword"
+  }'
+```
+</CodeGroup>
+
+Authenticate as admin user for dashboard access.
+
+### List All Users
+
+<CodeGroup>
+```bash GET /api/auth/users
+curl https://your-app.region.insforge.app/api/auth/users?limit=10&offset=0&search=john \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+List all users with pagination (admin only).
+
+**Query Parameters**
+
+<ParamField query="offset" type="string" default="0">
+  Number of records to skip
+</ParamField>
+<ParamField query="limit" type="string" default="10">
+  Maximum records to return
+</ParamField>
+<ParamField query="search" type="string">
+  Search by email or name
+</ParamField>
+
+### Generate Anonymous Token
+
+<CodeGroup>
+```bash POST /api/auth/tokens/anon
+curl -X POST https://your-app.region.insforge.app/api/auth/tokens/anon \
+  -H "Authorization: Bearer ADMIN_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Generate non-expiring anonymous token for public API access (admin only).
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "message": "Anonymous token generated successfully (never expires)"
+}
+```
+</ResponseExample>

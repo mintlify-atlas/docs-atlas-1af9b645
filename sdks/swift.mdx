@@ -1,0 +1,341 @@
+---
+title: Swift SDK
+description: Official Swift SDK for building iOS, macOS, tvOS, and watchOS apps with InsForge
+---
+
+The InsForge Swift SDK provides native Swift support for building Apple platform applications with InsForge backend services. It offers a modern Swift API with async/await support and full type safety.
+
+<Note>
+  The Swift SDK is currently in development. Use the REST API directly or check back soon for the official Swift SDK release.
+</Note>
+
+## Installation
+
+### Swift Package Manager
+
+Add InsForge to your `Package.swift` file:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/InsForge/insforge-swift.git", from: "1.0.0")
+]
+```
+
+Or add it via Xcode:
+1. File → Add Package Dependencies
+2. Enter: `https://github.com/InsForge/insforge-swift.git`
+3. Select version and add to your target
+
+## Quick Start
+
+### 1. Initialize the Client
+
+Create an InsForge client in your app:
+
+```swift
+import InsforgeSDK
+
+let insforge = InsforgeClient(
+    baseUrl: "https://your-app.region.insforge.app",
+    anonKey: "your-anon-key-here"
+)
+```
+
+### 2. Store Configuration Securely
+
+Use a configuration file or environment setup:
+
+```swift Config.swift
+import Foundation
+
+enum Config {
+    static let insforgeBaseUrl = "https://your-app.region.insforge.app"
+    static let insforgeAnonKey = "your-anon-key-here"
+}
+
+let insforge = InsforgeClient(
+    baseUrl: Config.insforgeBaseUrl,
+    anonKey: Config.insforgeAnonKey
+)
+```
+
+## Core Features
+
+### Database Operations
+
+Query your PostgreSQL database with type-safe Swift APIs:
+
+```swift
+// Fetch all posts
+let posts = try await insforge.database
+    .from("posts")
+    .select()
+    .execute()
+
+// Insert a new post
+struct Post: Codable {
+    let title: String
+    let content: String
+    let userId: String
+}
+
+let newPost = Post(
+    title: "Hello from iOS",
+    content: "Built with InsForge Swift SDK",
+    userId: currentUserId
+)
+
+try await insforge.database
+    .from("posts")
+    .insert(newPost)
+    .execute()
+
+// Update a post
+try await insforge.database
+    .from("posts")
+    .update(["title": "Updated Title"])
+    .eq("id", postId)
+    .execute()
+
+// Delete a post
+try await insforge.database
+    .from("posts")
+    .delete()
+    .eq("id", postId)
+    .execute()
+```
+
+### Authentication
+
+Implement user authentication in your iOS app:
+
+```swift
+// Sign up with email and password
+let result = try await insforge.auth.signUp(
+    email: "user@example.com",
+    password: "secure_password",
+    name: "John Doe"
+)
+
+if let user = result.user {
+    print("User created: \(user.email)")
+}
+
+// Sign in
+let session = try await insforge.auth.signInWithPassword(
+    email: "user@example.com",
+    password: "secure_password"
+)
+
+print("Access token: \(session.accessToken)")
+
+// Get current session
+if let currentSession = try await insforge.auth.getCurrentSession() {
+    print("Logged in as: \(currentSession.user.email)")
+}
+
+// Sign out
+try await insforge.auth.signOut()
+```
+
+### Storage
+
+Upload and download files from your iOS app:
+
+```swift
+// Upload an image
+if let imageData = image.jpegData(compressionQuality: 0.8) {
+    let result = try await insforge.storage
+        .from("avatars")
+        .upload(path: "user/\(userId)/avatar.jpg", data: imageData)
+    
+    print("File URL: \(result.url)")
+}
+
+// Download a file
+let data = try await insforge.storage
+    .from("avatars")
+    .download(path: "user/\(userId)/avatar.jpg")
+
+let image = UIImage(data: data)
+
+// Delete a file
+try await insforge.storage
+    .from("avatars")
+    .remove(path: "user/\(userId)/avatar.jpg")
+```
+
+### AI Operations
+
+Integrate AI features in your app:
+
+```swift
+// Chat completion
+let completion = try await insforge.ai.chat.completions.create(
+    model: "anthropic/claude-3.5-haiku",
+    messages: [
+        ChatMessage(role: .user, content: "What is SwiftUI?")
+    ]
+)
+
+print(completion.choices.first?.message.content ?? "")
+
+// Image generation
+let imageResult = try await insforge.ai.images.generate(
+    model: "google/gemini-3-pro-image-preview",
+    prompt: "A beautiful sunset over mountains",
+    size: "1024x1024"
+)
+
+if let base64 = imageResult.data.first?.b64Json,
+   let imageData = Data(base64Encoded: base64) {
+    let generatedImage = UIImage(data: imageData)
+}
+```
+
+### Realtime Subscriptions
+
+Listen to real-time events:
+
+```swift
+// Connect to realtime server
+try await insforge.realtime.connect()
+
+// Subscribe to a channel
+try await insforge.realtime.subscribe(channel: "chat:room-1")
+
+// Listen for messages
+insforge.realtime.on(event: "new_message") { payload in
+    print("New message: \(payload)")
+}
+
+// Publish a message
+try await insforge.realtime.publish(
+    channel: "chat:room-1",
+    event: "new_message",
+    payload: ["text": "Hello from iOS!"]
+)
+
+// Disconnect
+insforge.realtime.disconnect()
+```
+
+## SwiftUI Integration
+
+Use InsForge with SwiftUI:
+
+```swift
+import SwiftUI
+import InsforgeSDK
+
+struct ContentView: View {
+    @State private var posts: [Post] = []
+    @State private var isLoading = false
+    
+    var body: some View {
+        List(posts) { post in
+            VStack(alignment: .leading) {
+                Text(post.title)
+                    .font(.headline)
+                Text(post.content)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .task {
+            await loadPosts()
+        }
+    }
+    
+    func loadPosts() async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            posts = try await insforge.database
+                .from("posts")
+                .select()
+                .order("created_at", ascending: false)
+                .limit(20)
+                .execute()
+        } catch {
+            print("Error loading posts: \(error)")
+        }
+    }
+}
+```
+
+## Error Handling
+
+Handle errors with Swift's error handling:
+
+```swift
+do {
+    let posts = try await insforge.database
+        .from("posts")
+        .select()
+        .execute()
+    
+    print("Loaded \(posts.count) posts")
+} catch let error as InsforgeError {
+    switch error {
+    case .unauthorized:
+        print("User not authenticated")
+    case .notFound:
+        print("Resource not found")
+    case .networkError(let message):
+        print("Network error: \(message)")
+    default:
+        print("Error: \(error.localizedDescription)")
+    }
+}
+```
+
+## Platform Support
+
+The InsForge Swift SDK supports:
+
+- **iOS** 15.0+
+- **macOS** 12.0+
+- **tvOS** 15.0+
+- **watchOS** 8.0+
+
+## Alternative: REST API
+
+While the Swift SDK is in development, you can use the [REST API](/sdks/rest-api) directly with URLSession:
+
+```swift
+struct InsforgeAPI {
+    let baseUrl: String
+    let anonKey: String
+    
+    func fetchPosts() async throws -> [Post] {
+        let url = URL(string: "\(baseUrl)/api/db/posts")!
+        var request = URLRequest(url: url)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode([Post].self, from: data)
+    }
+}
+```
+
+[Learn more about the REST API →](/sdks/rest-api)
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="REST API Reference" icon="code" href="/sdks/rest-api">
+    Use REST API directly while Swift SDK is in development
+  </Card>
+  <Card title="Authentication Guide" icon="lock" href="/guides/authentication">
+    Implement auth in your iOS app
+  </Card>
+  <Card title="Database Operations" icon="database" href="/guides/database">
+    Work with your PostgreSQL database
+  </Card>
+  <Card title="Example Apps" icon="mobile" href="https://github.com/InsForge/examples">
+    Browse Swift example projects
+  </Card>
+</CardGroup>

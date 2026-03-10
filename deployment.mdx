@@ -1,0 +1,678 @@
+---
+title: "Deployment"
+description: "Deploy InsForge on cloud-hosted infrastructure or self-host with Docker"
+---
+
+## Deployment Options
+
+InsForge offers flexible deployment options to fit your needs:
+
+<CardGroup cols={2}>
+  <Card title="Cloud-Hosted" icon="cloud" color="#0ea5e9">
+    Fully managed at **insforge.dev** - zero infrastructure maintenance
+  </Card>
+
+  <Card title="Self-Hosted" icon="server" color="#8b5cf6">
+    Run on your own infrastructure with Docker - full control
+  </Card>
+</CardGroup>
+
+## Cloud-Hosted at insforge.dev
+
+The fastest way to get started. InsForge handles all infrastructure, scaling, backups, and updates.
+
+### Features
+
+<CardGroup cols={2}>
+  <Card title="Instant Provisioning" icon="bolt">
+    New projects deploy in under 60 seconds
+  </Card>
+
+  <Card title="Global Edge Network" icon="globe">
+    Automatic CDN for storage and edge function deployment
+  </Card>
+
+  <Card title="Automatic Backups" icon="hard-drive">
+    Daily database backups with point-in-time recovery
+  </Card>
+
+  <Card title="Auto-Scaling" icon="chart-line">
+    Handles traffic spikes without configuration
+  </Card>
+
+  <Card title="SSL/TLS" icon="lock">
+    Automatic HTTPS with Let's Encrypt certificates
+  </Card>
+
+  <Card title="Monitoring" icon="chart-mixed">
+    Built-in logs, metrics, and error tracking
+  </Card>
+</CardGroup>
+
+### Getting Started
+
+<Steps>
+  <Step title="Create an account">
+    Visit [insforge.dev](https://insforge.dev) and sign up with email or OAuth (Google, GitHub).
+  </Step>
+
+  <Step title="Create a project">
+    Click **Create New Project**, choose:
+    - **Project Name** - Your app identifier (e.g., `my-todo-app`)
+    - **Region** - Choose closest to your users (US, EU, Asia)
+
+    Your backend will be available at:
+    ```
+    https://your-project.region.insforge.app
+    ```
+  </Step>
+
+  <Step title="Connect MCP">
+    Follow the [MCP Setup Guide](/mcp-setup) to connect your AI assistant.
+  </Step>
+
+  <Step title="Start building">
+    Use the InsForge SDK or MCP tools to build your app. Your database, auth, storage, and functions are ready to use immediately.
+  </Step>
+</Steps>
+
+### Architecture
+
+Cloud-hosted InsForge runs on:
+
+- **Database:** Managed PostgreSQL with automatic backups and replication
+- **Storage:** S3-compatible object storage with CloudFront CDN
+- **Functions:** Serverless Deno runtime on global edge nodes
+- **Auth:** Distributed JWT validation and session management
+- **API Gateway:** Auto-scaling PostgREST instances
+
+### Pricing
+
+<Note>
+  See [insforge.dev/pricing](https://insforge.dev/pricing) for current plans and pricing.
+</Note>
+
+Typical tiers:
+- **Free Tier** - Hobby projects, 500MB database, 1GB storage
+- **Pro Tier** - Production apps, unlimited databases, 50GB storage
+- **Enterprise** - Custom SLAs, dedicated infrastructure, multi-region
+
+---
+
+## Self-Hosted with Docker
+
+Run InsForge on your own infrastructure for complete control over data, scaling, and costs.
+
+### Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Docker" icon="docker">
+    Docker Engine 20.10+ and Docker Compose 2.0+
+  </Card>
+
+  <Card title="System Requirements" icon="microchip">
+    Minimum: 2 CPU cores, 4GB RAM, 20GB disk
+  </Card>
+</CardGroup>
+
+### Quick Start
+
+<Steps>
+  <Step title="Download Docker Compose files">
+    <Tabs>
+      <Tab title="Production (Pre-built Images)">
+        Use the pre-built Docker images from GitHub Container Registry:
+
+        ```bash
+        # Download production compose file
+        wget https://raw.githubusercontent.com/insforge/insforge/main/deploy/docker-compose/docker-compose.yml
+
+        # Download environment template
+        wget https://raw.githubusercontent.com/insforge/insforge/main/deploy/docker-compose/.env.example
+
+        # Create your environment file
+        mv .env.example .env
+        ```
+
+        Edit `.env` and set required variables:
+
+        ```bash .env
+        # Admin credentials (CHANGE THESE!)
+        ADMIN_EMAIL=admin@example.com
+        ADMIN_PASSWORD=your-secure-password
+
+        # JWT secret (must be 32+ characters)
+        JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+        # Optional: API key (auto-generated if not set)
+        ACCESS_API_KEY=ik_your-api-key-here-32-chars-minimum
+
+        # Database configuration
+        POSTGRES_USER=postgres
+        POSTGRES_PASSWORD=postgres
+        POSTGRES_DB=insforge
+        ```
+      </Tab>
+
+      <Tab title="Development (Build from Source)">
+        Clone the repository and build from source:
+
+        ```bash
+        # Clone InsForge
+        git clone https://github.com/insforge/insforge.git
+        cd insforge
+
+        # Copy environment config
+        cp .env.example .env
+
+        # Edit .env with your settings
+        nano .env
+        ```
+
+        Set the same environment variables as the production setup.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Start InsForge">
+    <Tabs>
+      <Tab title="Production">
+        ```bash
+        # Start all services in detached mode
+        docker compose up -d
+
+        # Watch the logs
+        docker compose logs -f
+        ```
+      </Tab>
+
+      <Tab title="Development">
+        ```bash
+        # Use the production compose file
+        docker compose -f docker-compose.prod.yml up -d
+
+        # Or use development mode (hot reload)
+        docker compose up -d
+        ```
+      </Tab>
+    </Tabs>
+
+    Wait 1-2 minutes for all containers to be healthy:
+
+    ```bash
+    docker compose ps
+    ```
+
+    You should see:
+    ```
+    NAME                  STATUS
+    insforge-app          Up (healthy)
+    insforge-postgres     Up (healthy)
+    insforge-postgrest    Up
+    insforge-deno         Up (healthy)
+    insforge-vector       Up (healthy)
+    ```
+  </Step>
+
+  <Step title="Access InsForge dashboard">
+    Open your browser and navigate to:
+
+    ```
+    http://localhost:7130
+    ```
+
+    Sign in with your admin credentials from `.env`:
+    - Email: `admin@example.com` (or what you set)
+    - Password: `your-secure-password`
+
+    <Warning>
+      **Change the default admin password immediately!** Never use `change-this-password` in production.
+    </Warning>
+  </Step>
+
+  <Step title="Connect MCP to your AI assistant">
+    Follow the [MCP Setup Guide](/mcp-setup) using the self-hosted configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "insforge": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "@insforge/mcp",
+            "--api-key",
+            "ik_your-api-key-here",
+            "--base-url",
+            "http://localhost:7130"
+          ]
+        }
+      }
+    }
+    ```
+
+    Get your API key from **Settings** → **API Keys** in the dashboard.
+  </Step>
+</Steps>
+
+### Architecture
+
+Self-hosted InsForge includes these containers:
+
+<Tabs>
+  <Tab title="Core Services">
+    | Service | Image | Port | Purpose |
+    |---------|-------|------|----------|
+    | **insforge** | `ghcr.io/insforge/insforge-oss` | 7130, 7131, 7132 | Main app (backend, frontend, auth) |
+    | **postgres** | `ghcr.io/insforge/postgres` | 5432 | PostgreSQL database with extensions |
+    | **postgrest** | `postgrest/postgrest` | 5430 | REST API for database |
+    | **deno** | `ghcr.io/insforge/deno-runtime` | 7133 | Serverless function runtime |
+    | **vector** | `timberio/vector` | - | Log collection and shipping |
+  </Tab>
+
+  <Tab title="Port Mapping">
+    | Port | Service | Description |
+    |------|---------|-------------|
+    | `7130` | InsForge Backend | Main API and dashboard |
+    | `7131` | InsForge Frontend | Web UI (proxied by backend) |
+    | `7132` | InsForge Auth | Authentication service |
+    | `7133` | Deno Runtime | Edge functions execution |
+    | `5432` | PostgreSQL | Database (not exposed in production) |
+    | `5430` | PostgREST | Database REST API |
+  </Tab>
+
+  <Tab title="Volumes">
+    | Volume | Purpose |
+    |--------|----------|
+    | `postgres-data` | Database persistence |
+    | `storage-data` | File storage (when S3 not configured) |
+    | `insforge-logs` | Application logs |
+    | `deno_cache` | Deno module cache |
+  </Tab>
+</Tabs>
+
+### Docker Compose Configuration
+
+The production `docker-compose.yml` uses pre-built images:
+
+```yaml docker-compose.yml
+services:
+  postgres:
+    image: ghcr.io/insforge/postgres-all:latest
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-insforge}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-${JWT_SECRET}}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.12
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  insforge:
+    image: ghcr.io/insforge/insforge-oss:v1.5.0
+    ports:
+      - "7130:7130"
+      - "7131:7131"
+      - "7132:7132"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - POSTGREST_BASE_URL=http://postgrest:3000
+    volumes:
+      - storage-data:/insforge-storage
+      - insforge-logs:/insforge-logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  deno:
+    image: ghcr.io/insforge/deno-runtime:latest
+    ports:
+      - "7133:7133"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - POSTGREST_BASE_URL=http://postgrest:3000
+    volumes:
+      - deno_cache:/deno-dir
+```
+
+### Environment Variables
+
+Complete `.env` reference:
+
+<Tabs>
+  <Tab title="Required">
+    ```bash .env
+    # Admin account (change these!)
+    ADMIN_EMAIL=admin@example.com
+    ADMIN_PASSWORD=change-this-password
+
+    # JWT secret (32+ characters)
+    JWT_SECRET=your-secret-key-here-must-be-32-char-or-above
+
+    # PostgreSQL
+    POSTGRES_USER=postgres
+    POSTGRES_PASSWORD=postgres
+    POSTGRES_DB=insforge
+    ```
+  </Tab>
+
+  <Tab title="Optional">
+    ```bash .env
+    # API Key (auto-generated if not set)
+    ACCESS_API_KEY=ik_your-api-key-here-32-chars-minimum
+
+    # Encryption key for secrets (defaults to JWT_SECRET)
+    ENCRYPTION_KEY=
+
+    # Server port (default: 7130)
+    PORT=7130
+
+    # API base URL (for external access)
+    API_BASE_URL=http://localhost:7130
+    VITE_API_BASE_URL=http://localhost:7130
+
+    # Max file upload size in bytes (default: 50MB)
+    MAX_FILE_SIZE=52428800
+    ```
+  </Tab>
+
+  <Tab title="Storage (S3)">
+    ```bash .env
+    # S3-compatible storage (optional)
+    AWS_ACCESS_KEY_ID=
+    AWS_SECRET_ACCESS_KEY=
+    AWS_REGION=us-east-1
+    AWS_S3_BUCKET=my-bucket
+
+    # Alternative S3 providers (Wasabi, MinIO, etc.)
+    S3_ACCESS_KEY_ID=
+    S3_SECRET_ACCESS_KEY=
+    S3_ENDPOINT_URL=https://s3.wasabisys.com
+    ```
+  </Tab>
+
+  <Tab title="OAuth">
+    ```bash .env
+    # Google OAuth
+    GOOGLE_CLIENT_ID=
+    GOOGLE_CLIENT_SECRET=
+
+    # GitHub OAuth
+    GITHUB_CLIENT_ID=
+    GITHUB_CLIENT_SECRET=
+
+    # Microsoft OAuth
+    MICROSOFT_CLIENT_ID=
+    MICROSOFT_CLIENT_SECRET=
+
+    # Discord, LinkedIn, X (Twitter), Apple
+    DISCORD_CLIENT_ID=
+    DISCORD_CLIENT_SECRET=
+    LINKEDIN_CLIENT_ID=
+    LINKEDIN_CLIENT_SECRET=
+    X_CLIENT_ID=
+    X_CLIENT_SECRET=
+    APPLE_CLIENT_ID=
+    APPLE_CLIENT_SECRET=
+    ```
+  </Tab>
+
+  <Tab title="AI/Functions">
+    ```bash .env
+    # OpenRouter (for AI features)
+    OPENROUTER_API_KEY=
+
+    # Deno Subhosting (for cloud edge functions)
+    DENO_SUBHOSTING_TOKEN=
+    DENO_SUBHOSTING_ORG_ID=
+
+    # Function timeout (default: 60s)
+    WORKER_TIMEOUT_MS=60000
+    ```
+  </Tab>
+</Tabs>
+
+### Production Deployment
+
+<Steps>
+  <Step title="Choose a hosting provider">
+    Self-hosted InsForge runs on any infrastructure with Docker support:
+
+    <CardGroup cols={3}>
+      <Card title="AWS EC2" icon="aws">
+        Flexible compute with full control
+      </Card>
+      <Card title="DigitalOcean" icon="server">
+        Simple droplets, managed databases
+      </Card>
+      <Card title="Railway" icon="train">
+        One-click deploy, auto-scaling
+      </Card>
+      <Card title="Azure VM" icon="microsoft">
+        Enterprise-grade infrastructure
+      </Card>
+      <Card title="Hetzner" icon="server">
+        Cost-effective dedicated servers
+      </Card>
+      <Card title="Zeabur" icon="rocket">
+        Serverless container platform
+      </Card>
+    </CardGroup>
+  </Step>
+
+  <Step title="Configure production environment">
+    Create a production `.env` file with secure values:
+
+    ```bash
+    # Generate strong secrets
+    JWT_SECRET=$(openssl rand -base64 32)
+    ADMIN_PASSWORD=$(openssl rand -base64 24)
+    ACCESS_API_KEY=ik_$(openssl rand -hex 32)
+
+    # Use managed database (recommended)
+    DATABASE_URL=postgresql://user:pass@your-managed-db.com:5432/insforge
+
+    # Use S3 for storage
+    AWS_S3_BUCKET=your-production-bucket
+    AWS_REGION=us-east-1
+    AWS_ACCESS_KEY_ID=your-access-key
+    AWS_SECRET_ACCESS_KEY=your-secret-key
+    ```
+
+    <Warning>
+      **Never commit `.env` to version control!** Add it to `.gitignore`.
+    </Warning>
+  </Step>
+
+  <Step title="Enable HTTPS with reverse proxy">
+    Use Nginx or Caddy as a reverse proxy with SSL/TLS:
+
+    <Tabs>
+      <Tab title="Caddy (Easiest)">
+        ```caddy Caddyfile
+        your-domain.com {
+          reverse_proxy localhost:7130
+        }
+        ```
+
+        Caddy automatically handles Let's Encrypt certificates.
+      </Tab>
+
+      <Tab title="Nginx">
+        ```nginx nginx.conf
+        server {
+          listen 80;
+          server_name your-domain.com;
+          return 301 https://$host$request_uri;
+        }
+
+        server {
+          listen 443 ssl;
+          server_name your-domain.com;
+
+          ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+          ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+          location / {
+            proxy_pass http://localhost:7130;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+          }
+        }
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Set up backups">
+    **Database backups:**
+
+    ```bash backup.sh
+    #!/bin/bash
+    # Backup PostgreSQL database
+    docker exec insforge-postgres pg_dump -U postgres insforge > backup-$(date +%Y%m%d).sql
+
+    # Upload to S3
+    aws s3 cp backup-$(date +%Y%m%d).sql s3://your-backups/
+    ```
+
+    **Automated with cron:**
+
+    ```bash
+    # Daily backups at 2 AM
+    0 2 * * * /path/to/backup.sh
+    ```
+  </Step>
+
+  <Step title="Monitor and scale">
+    **View logs:**
+
+    ```bash
+    # All services
+    docker compose logs -f
+
+    # Specific service
+    docker compose logs -f insforge
+    ```
+
+    **Monitor resource usage:**
+
+    ```bash
+    docker stats
+    ```
+
+    **Scale services (if needed):**
+
+    ```bash
+    # Scale PostgREST for high traffic
+    docker compose up -d --scale postgrest=3
+    ```
+  </Step>
+</Steps>
+
+### One-Click Deployments
+
+Deploy InsForge instantly on managed platforms:
+
+<CardGroup cols={3}>
+  <Card title="Railway" icon="train" href="https://railway.com/deploy/insforge">
+    Deploy with one click
+  </Card>
+
+  <Card title="Zeabur" icon="rocket" href="https://zeabur.com/templates/Q82M3Y">
+    Serverless container deployment
+  </Card>
+
+  <Card title="Sealos" icon="ship" href="https://sealos.io/products/app-store/insforge">
+    Kubernetes-based deployment
+  </Card>
+</CardGroup>
+
+### Updating InsForge
+
+To update your self-hosted instance:
+
+```bash
+# Pull latest images
+docker compose pull
+
+# Restart services with new images
+docker compose up -d
+
+# Check logs
+docker compose logs -f insforge
+```
+
+For source builds:
+
+```bash
+git pull origin main
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+---
+
+## Comparison: Cloud vs Self-Hosted
+
+| Feature | Cloud-Hosted | Self-Hosted |
+|---------|--------------|-------------|
+| **Setup Time** | < 1 minute | 5-10 minutes |
+| **Infrastructure** | Fully managed | You manage |
+| **Scaling** | Automatic | Manual |
+| **Backups** | Automatic | You configure |
+| **SSL/TLS** | Automatic | You configure |
+| **Monitoring** | Built-in | You configure |
+| **Updates** | Automatic | Manual |
+| **Cost** | Pay per usage | Infrastructure cost |
+| **Data Control** | InsForge servers | Your servers |
+| **Customization** | Limited | Full control |
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Connect MCP" icon="plug" href="/mcp-setup">
+    Set up InsForge MCP for your AI assistant
+  </Card>
+
+  <Card title="Build Your First App" icon="rocket" href="/quickstart">
+    Create a todo app or Instagram clone
+  </Card>
+
+  <Card title="Core Features" icon="database" href="/features/database">
+    Explore database, auth, storage, and functions
+  </Card>
+
+  <Card title="Security Guide" icon="shield" href="/platform/security">
+    Production security best practices
+  </Card>
+</CardGroup>
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card title="Discord Community" icon="discord" href="https://discord.com/invite/MPxwj5xVvW">
+    Get deployment help from the community
+  </Card>
+
+  <Card title="GitHub Issues" icon="github" href="https://github.com/InsForge/InsForge/issues">
+    Report deployment issues or bugs
+  </Card>
+</CardGroup>

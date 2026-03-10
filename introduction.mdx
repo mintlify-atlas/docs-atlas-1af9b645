@@ -1,0 +1,147 @@
+---
+title: "Introduction"
+description: "The backend built for agentic development. Give AI agents everything they need to ship fullstack apps."
+---
+
+<div style={{
+  background: 'linear-gradient(135deg, #121212 0%, #1a1a1a 100%)',
+  borderRadius: '8px',
+  padding: '3rem 2rem',
+  marginBottom: '2rem',
+  border: '1px solid rgba(255, 255, 255, 0.15)',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)'
+}}>
+  <h1 style={{
+    fontSize: '48px',
+    fontWeight: '700',
+    color: '#E6E6E6',
+    marginBottom: '1rem',
+    fontFamily: 'Inter'
+  }}>
+    Backend built for AI-assisted development
+  </h1>
+  <p style={{
+    fontSize: '20px',
+    color: '#E6E6E6',
+    marginBottom: '2rem',
+    opacity: '0.9',
+    fontFamily: 'Inter'
+  }}>
+    InsForge is an AI-optimized Backend-as-a-Service platform that provides everything you need to build modern applications—PostgreSQL database, JWT authentication, S3-compatible storage, serverless functions, and AI integration. Every endpoint is designed to be agent-friendly with consistent patterns and predictable responses.
+  </p>
+  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+    <a
+      href="/quickstart"
+      style={{
+        background: '#ffffff',
+        color: '#000000',
+        padding: '0.75rem 2rem',
+        borderRadius: '9999px',
+        textDecoration: 'none',
+        fontWeight: '600',
+        display: 'inline-block',
+        fontFamily: 'Inter'
+      }}
+    >
+      Get Started
+    </a>
+    <a
+      href="https://github.com/InsForge/InsForge"
+      style={{
+        background: 'transparent',
+        color: '#3AD598',
+        padding: '0.75rem 2rem',
+        borderRadius: '4px',
+        textDecoration: 'none',
+        fontWeight: '600',
+        border: '1px solid #3AD598',
+        display: 'inline-block',
+        fontFamily: 'Inter'
+      }}
+    >
+      View on GitHub
+    </a>
+  </div>
+</div>
+
+## Why InsForge?
+
+Backend development with AI agents has long been a half-solved problem. AI can generate frontend code effortlessly but struggles with backend complexity—database setup, authentication flows, API design all require deep expertise. Rather than forcing developers to piece together multiple services or become DevOps experts, InsForge provides a complete backend solution designed specifically for AI-assisted development.
+
+Connect your AI assistant to InsForge using our MCP server, and it can read documentation, set up your backend, and write complete applications, all from simple prompts. No backend knowledge required.
+
+## Core Features
+
+Everything you need to build real applications, designed for AI agents:
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL Database" icon="database" href="/features/database">
+    Tables become REST APIs instantly. No code. Just schema.
+  </Card>
+
+  <Card title="Authentication" icon="shield" href="/features/authentication">
+    User signup, login, sessions, OAuth. Zero configuration.
+  </Card>
+
+  <Card title="File Storage" icon="folder" href="/features/storage">
+    Upload, download, serve files. Works like any other API.
+  </Card>
+
+  <Card title="Edge Functions" icon="bolt" href="/features/functions">
+    Deploy serverless functions that run on the edge. Zero infrastructure.
+  </Card>
+
+  <Card title="AI Integration" icon="sparkles" href="/features/ai-integration">
+    Built-in AI capabilities with streaming support. Ready to use.
+  </Card>
+
+  <Card title="Realtime" icon="satellite-dish" href="/features/realtime">
+    Pub/sub messaging with WebSockets. Build collaborative apps.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+InsForge acts as a semantic layer between AI coding agents and backend primitives. It performs backend context engineering so agents can understand, operate, and inspect backend systems.
+
+<Steps>
+  <Step title="Fetch backend context">
+    AI agents can fetch documentation and available operations for the backend primitives they use through the MCP server.
+  </Step>
+  
+  <Step title="Configure primitives">
+    Agents can configure backend primitives directly—create tables, set up auth providers, deploy functions—all through simple tool calls.
+  </Step>
+  
+  <Step title="Inspect backend state">
+    Backend state and logs are exposed through structured schemas that agents can query and reason about.
+  </Step>
+</Steps>
+
+## Deployment Options
+
+<CardGroup cols={2}>
+  <Card title="Cloud-hosted" icon="cloud" href="https://insforge.dev">
+    Get started in seconds with our managed cloud platform at insforge.dev
+  </Card>
+
+  <Card title="Self-hosted" icon="server" href="/platform/self-hosting">
+    Deploy InsForge on your own infrastructure with Docker Compose
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get up and running in 5 minutes
+  </Card>
+
+  <Card title="MCP Setup" icon="plug" href="/mcp-setup">
+    Connect your AI assistant
+  </Card>
+
+  <Card title="Examples" icon="code" href="/resources/examples">
+    See real-world applications
+  </Card>
+</CardGroup>

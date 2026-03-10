@@ -1,0 +1,248 @@
+---
+title: 'Metadata API'
+description: 'Retrieve application metadata, database statistics, and API keys'
+icon: 'info-circle'
+---
+
+<Note>
+The Metadata API provides administrative endpoints to monitor your InsForge backend, retrieve database statistics for dashboards, and manage API keys. These endpoints require admin authentication.
+</Note>
+
+## Get App Metadata
+
+<api method="GET" path="/api/metadata" />
+
+Retrieve comprehensive metadata about your InsForge application including version, environment, database configuration, and uptime.
+
+### Authentication
+
+Requires either:
+- **Bearer Token**: Admin JWT token in `Authorization: Bearer <token>` header
+- **API Key**: API key in `X-API-Key: <key>` header
+
+### Response
+
+<ResponseField name="name" type="string">
+  Application name
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  Current version of the InsForge backend
+</ResponseField>
+
+<ResponseField name="environment" type="string">
+  Deployment environment (e.g., production, staging)
+</ResponseField>
+
+<ResponseField name="database" type="object">
+  Database connection information
+  
+  <ResponseField name="database.host" type="string">
+    Database server hostname
+  </ResponseField>
+  
+  <ResponseField name="database.port" type="integer">
+    Database server port
+  </ResponseField>
+  
+  <ResponseField name="database.database" type="string">
+    Database name
+  </ResponseField>
+  
+  <ResponseField name="database.ssl" type="boolean">
+    Whether SSL is enabled for database connections
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="uptime" type="number">
+  Application uptime in seconds
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  Current server timestamp in ISO 8601 format
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://your-app.region.insforge.app/api/metadata \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### Example Response
+
+```json
+{
+  "name": "Insforge Backend",
+  "version": "2.0.0",
+  "environment": "production",
+  "database": {
+    "host": "db.example.com",
+    "port": 5432,
+    "database": "insforge",
+    "ssl": true
+  },
+  "uptime": 86400,
+  "timestamp": "2024-01-21T10:30:00Z"
+}
+```
+
+---
+
+## Get Database Metadata
+
+<api method="GET" path="/api/metadata/database" />
+
+Retrieve detailed database statistics including table information, record counts, and database size. Ideal for building admin dashboards.
+
+### Authentication
+
+Requires either:
+- **Bearer Token**: Admin JWT token in `Authorization: Bearer <token>` header
+- **API Key**: API key in `X-API-Key: <key>` header
+
+### Response
+
+<ResponseField name="tables" type="array">
+  Array of table metadata objects
+  
+  <ResponseField name="tables[].name" type="string">
+    Table name
+  </ResponseField>
+  
+  <ResponseField name="tables[].recordCount" type="integer">
+    Number of records in the table
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="totalTables" type="integer">
+  Total number of tables in the database
+</ResponseField>
+
+<ResponseField name="totalRecords" type="integer">
+  Total number of records across all tables
+</ResponseField>
+
+<ResponseField name="databaseSize" type="string">
+  Total database size (human-readable format)
+</ResponseField>
+
+<ResponseField name="lastUpdated" type="string">
+  Timestamp when statistics were last updated
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://your-app.region.insforge.app/api/metadata/database \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### Example Response
+
+```json
+{
+  "tables": [
+    {
+      "name": "posts",
+      "recordCount": 5678
+    },
+    {
+      "name": "comments",
+      "recordCount": 9012
+    }
+  ],
+  "totalTables": 15,
+  "totalRecords": 16924,
+  "databaseSize": "125 MB",
+  "lastUpdated": "2024-01-21T10:30:00Z"
+}
+```
+
+### Error Responses
+
+<ResponseField name="error" type="string">
+  Error code: `UNAUTHORIZED`
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable error message
+</ResponseField>
+
+<ResponseField name="statusCode" type="integer">
+  HTTP status code: `401`
+</ResponseField>
+
+<ResponseField name="nextAction" type="string">
+  Suggested action to resolve the error
+</ResponseField>
+
+---
+
+## Get API Key
+
+<api method="GET" path="/api/metadata/api-key" />
+
+Retrieve the API key for your InsForge backend. This is an admin-only endpoint that requires bearer token authentication (API key authentication is not allowed for this endpoint).
+
+### Authentication
+
+Requires:
+- **Bearer Token**: Admin JWT token in `Authorization: Bearer <token>` header
+
+<Note>
+This endpoint only accepts bearer token authentication. You cannot use an API key to retrieve the API key.
+</Note>
+
+### Response
+
+<ResponseField name="apiKey" type="string">
+  The API key for your InsForge backend (format: `ins_` followed by 32 hexadecimal characters)
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://your-app.region.insforge.app/api/metadata/api-key \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### Example Response
+
+```json
+{
+  "apiKey": "ins_1234567890abcdef1234567890abcdef"
+}
+```
+
+### Error Responses
+
+**403 Forbidden** - When a non-admin user attempts to access the endpoint:
+
+```json
+{
+  "error": "INSUFFICIENT_PERMISSIONS",
+  "message": "Only admin users can access API keys",
+  "statusCode": 403,
+  "nextAction": "Contact an administrator for API key access"
+}
+```
+
+---
+
+## When to Use Metadata APIs
+
+<Note>
+Use these endpoints to:
+- **Monitor backend health**: Check version, uptime, and environment configuration
+- **Build admin dashboards**: Display database statistics and table information
+- **Retrieve API credentials**: Get the API key for SDK configuration
+- **Debug connection issues**: Verify database configuration and connectivity
+</Note>
+
+### Common Use Cases
+
+1. **Admin Dashboard**: Use `/api/metadata/database` to display real-time database statistics
+2. **Monitoring Tools**: Use `/api/metadata` to track uptime and version information
+3. **Setup Wizards**: Use `/api/metadata/api-key` to retrieve credentials for SDK initialization
+4. **Health Checks**: Combine with health endpoints to ensure backend availability

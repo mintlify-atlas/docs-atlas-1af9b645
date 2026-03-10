@@ -1,0 +1,180 @@
+---
+title: 'Health Check API'
+description: 'Monitor API availability and status'
+icon: 'heart-pulse'
+---
+
+<Note>
+The Health Check API provides a simple endpoint to verify that your InsForge backend is running and accepting requests. This endpoint does not require authentication and is designed for monitoring tools, load balancers, and health check scripts.
+</Note>
+
+## Health Check
+
+<api method="GET" path="/api/health" />
+
+Check if the API is running and healthy. This endpoint returns a simple status response and is ideal for uptime monitoring and load balancer health checks.
+
+### Authentication
+
+No authentication required. This is a public endpoint accessible to anyone.
+
+### Response
+
+<ResponseField name="status" type="string">
+  Health status of the API. Returns `"ok"` when the service is healthy.
+</ResponseField>
+
+<ResponseField name="service" type="string">
+  Service name identifier (e.g., `"Insforge Backend"`)
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  Current server timestamp in ISO 8601 format
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://your-app.region.insforge.app/api/health
+```
+
+### Example Response
+
+```json
+{
+  "status": "ok",
+  "service": "Insforge Backend",
+  "timestamp": "2025-01-21T03:45:22.194Z"
+}
+```
+
+---
+
+## When to Use Health Check API
+
+<Note>
+Use this endpoint to:
+- **Uptime monitoring**: Verify your backend is available and responding
+- **Load balancer health checks**: Configure health checks in your infrastructure
+- **CI/CD pipelines**: Verify deployment success before running tests
+- **Status pages**: Display real-time API availability
+- **Alerting**: Trigger alerts when the endpoint becomes unreachable
+</Note>
+
+### Common Use Cases
+
+1. **Monitoring Services**: Integrate with Pingdom, UptimeRobot, or DataDog for continuous monitoring
+2. **Load Balancers**: Configure AWS ELB, NGINX, or HAProxy to check backend health
+3. **Kubernetes**: Use as a liveness/readiness probe in your deployment
+4. **CI/CD**: Add a health check step after deployment to verify the service is running
+5. **Status Dashboard**: Display API availability on internal or public status pages
+
+### Integration Examples
+
+#### Docker Health Check
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f https://your-app.region.insforge.app/api/health || exit 1
+```
+
+#### Kubernetes Probe
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+```
+
+#### Shell Script Monitoring
+
+```bash
+#!/bin/bash
+# Simple health check script
+
+URL="https://your-app.region.insforge.app/api/health"
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $URL)
+
+if [ $RESPONSE -eq 200 ]; then
+  echo "✓ API is healthy"
+  exit 0
+else
+  echo "✗ API health check failed (HTTP $RESPONSE)"
+  exit 1
+fi
+```
+
+#### Node.js Monitoring
+
+```javascript
+const https = require('https');
+
+function checkHealth() {
+  const options = {
+    hostname: 'your-app.region.insforge.app',
+    path: '/api/health',
+    method: 'GET',
+    timeout: 5000
+  };
+
+  const req = https.request(options, (res) => {
+    let data = '';
+    
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+    
+    res.on('end', () => {
+      if (res.statusCode === 200) {
+        const health = JSON.parse(data);
+        console.log(`✓ API is healthy - Status: ${health.status}`);
+      } else {
+        console.error(`✗ Health check failed - HTTP ${res.statusCode}`);
+      }
+    });
+  });
+
+  req.on('error', (error) => {
+    console.error('✗ Health check failed:', error.message);
+  });
+
+  req.on('timeout', () => {
+    req.destroy();
+    console.error('✗ Health check timeout');
+  });
+
+  req.end();
+}
+
+// Check every 30 seconds
+setInterval(checkHealth, 30000);
+checkHealth(); // Initial check
+```
+
+---
+
+## Response Time Considerations
+
+<Note>
+The health check endpoint is designed to respond quickly (typically under 100ms). If response times are consistently slow or the endpoint times out, this may indicate:
+- High server load
+- Database connectivity issues
+- Network problems
+- Resource constraints
+
+Configure your monitoring tools with appropriate timeout values (recommended: 3-5 seconds).
+</Note>

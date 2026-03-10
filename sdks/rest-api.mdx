@@ -1,0 +1,587 @@
+---
+title: REST API
+description: Direct HTTP API access to InsForge services without an SDK
+---
+
+The InsForge REST API provides direct HTTP access to all InsForge services. Use it when:
+
+- You're building in a language without an official SDK
+- You want maximum control over HTTP requests
+- You're integrating InsForge into existing infrastructure
+- You prefer not to use an SDK
+
+All InsForge SDKs are built on top of this REST API.
+
+## Base URL
+
+Your InsForge backend URL:
+
+```
+https://your-app.region.insforge.app
+```
+
+Get this URL from your InsForge dashboard or the `get-backend-metadata` MCP tool.
+
+## Authentication
+
+### API Key (Anon Key)
+
+For public/unauthenticated requests, include your anon key:
+
+```bash
+curl https://your-app.region.insforge.app/api/db/posts \
+  -H "apikey: your-anon-key-here" \
+  -H "Content-Type: application/json"
+```
+
+### User Access Token
+
+For authenticated requests (after login), use the access token:
+
+```bash
+curl https://your-app.region.insforge.app/api/db/posts \
+  -H "Authorization: Bearer user-access-token" \
+  -H "Content-Type: application/json"
+```
+
+<Note>
+  Access tokens are returned from authentication endpoints (`/api/auth/signup`, `/api/auth/signin`).
+</Note>
+
+## Database Operations
+
+### Query Records (SELECT)
+
+```bash
+# Get all posts
+curl "https://your-app.region.insforge.app/api/db/posts?select=*" \
+  -H "apikey: your-anon-key"
+
+# Get specific columns
+curl "https://your-app.region.insforge.app/api/db/posts?select=id,title,content" \
+  -H "apikey: your-anon-key"
+
+# Filter with eq (equals)
+curl "https://your-app.region.insforge.app/api/db/posts?select=*&user_id=eq.123" \
+  -H "apikey: your-anon-key"
+
+# Filter with gt (greater than)
+curl "https://your-app.region.insforge.app/api/db/products?select=*&price=gt.100" \
+  -H "apikey: your-anon-key"
+
+# Order and limit
+curl "https://your-app.region.insforge.app/api/db/posts?select=*&order=created_at.desc&limit=10" \
+  -H "apikey: your-anon-key"
+
+# Pagination with range
+curl "https://your-app.region.insforge.app/api/db/posts?select=*" \
+  -H "apikey: your-anon-key" \
+  -H "Range: 0-9"
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "123",
+    "title": "Hello World",
+    "content": "My first post",
+    "created_at": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+### Insert Records
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/db/posts" \
+  -H "Authorization: Bearer user-token" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation" \
+  -d '{
+    "title": "New Post",
+    "content": "This is a new post",
+    "user_id": "user-123"
+  }'
+```
+
+<Note>
+  The `Prefer: return=representation` header returns the inserted data. Without it, you'll get a 201 status with no body.
+</Note>
+
+**Response:**
+
+```json
+[
+  {
+    "id": "456",
+    "title": "New Post",
+    "content": "This is a new post",
+    "user_id": "user-123",
+    "created_at": "2024-01-15T11:00:00Z"
+  }
+]
+```
+
+### Update Records
+
+```bash
+curl -X PATCH "https://your-app.region.insforge.app/api/db/posts?id=eq.456" \
+  -H "Authorization: Bearer user-token" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation" \
+  -d '{
+    "title": "Updated Title"
+  }'
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "456",
+    "title": "Updated Title",
+    "content": "This is a new post",
+    "updated_at": "2024-01-15T12:00:00Z"
+  }
+]
+```
+
+### Delete Records
+
+```bash
+curl -X DELETE "https://your-app.region.insforge.app/api/db/posts?id=eq.456" \
+  -H "Authorization: Bearer user-token"
+```
+
+**Response:** 204 No Content
+
+### Call RPC Functions
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/db/rpc/get_user_stats" \
+  -H "Authorization: Bearer user-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "123"
+  }'
+```
+
+## Authentication Endpoints
+
+### Sign Up
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/auth/signup" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "secure_password123",
+    "name": "John Doe"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "user": {
+    "id": "usr_abc123",
+    "email": "user@example.com",
+    "emailVerified": false,
+    "profile": {
+      "name": "John Doe"
+    }
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "requireEmailVerification": true
+}
+```
+
+### Sign In with Password
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/auth/signin" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "secure_password123"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "user": {
+    "id": "usr_abc123",
+    "email": "user@example.com",
+    "emailVerified": true
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Get Current User
+
+```bash
+curl "https://your-app.region.insforge.app/api/auth/user" \
+  -H "Authorization: Bearer user-access-token"
+```
+
+**Response:**
+
+```json
+{
+  "user": {
+    "id": "usr_abc123",
+    "email": "user@example.com",
+    "emailVerified": true,
+    "profile": {
+      "name": "John Doe",
+      "avatar_url": "https://example.com/avatar.jpg"
+    }
+  }
+}
+```
+
+### Sign Out
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/auth/signout" \
+  -H "Authorization: Bearer user-access-token"
+```
+
+## Storage Endpoints
+
+### Upload File
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/storage/buckets/images/objects" \
+  -H "Authorization: Bearer user-token" \
+  -F "path=user/123/avatar.jpg" \
+  -F "file=@/path/to/local/image.jpg"
+```
+
+**Response:**
+
+```json
+{
+  "bucket": "images",
+  "key": "user/123/avatar.jpg",
+  "size": 45678,
+  "mimeType": "image/jpeg",
+  "url": "https://your-app.region.insforge.app/api/storage/buckets/images/objects/user%2F123%2Favatar.jpg"
+}
+```
+
+### Download File
+
+```bash
+curl "https://your-app.region.insforge.app/api/storage/buckets/images/objects/user/123/avatar.jpg" \
+  -H "Authorization: Bearer user-token" \
+  -o downloaded-image.jpg
+```
+
+### Delete File
+
+```bash
+curl -X DELETE "https://your-app.region.insforge.app/api/storage/buckets/images/objects/user/123/avatar.jpg" \
+  -H "Authorization: Bearer user-token"
+```
+
+## AI Endpoints
+
+### Chat Completion
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/ai/chat/completions" \
+  -H "Authorization: Bearer user-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "anthropic/claude-3.5-haiku",
+    "messages": [
+      {"role": "user", "content": "What is InsForge?"}
+    ]
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "id": "chatcmpl-123",
+  "object": "chat.completion",
+  "created": 1705315200,
+  "model": "anthropic/claude-3.5-haiku",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "InsForge is a backend-as-a-service platform..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 50,
+    "total_tokens": 60
+  }
+}
+```
+
+### Image Generation
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/ai/images/generations" \
+  -H "Authorization: Bearer user-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "google/gemini-3-pro-image-preview",
+    "prompt": "A beautiful sunset over mountains",
+    "size": "1024x1024"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "created": 1705315200,
+  "data": [
+    {
+      "b64_json": "iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ]
+}
+```
+
+## Functions Endpoints
+
+### Invoke Function
+
+```bash
+curl -X POST "https://your-app.region.insforge.app/api/functions/hello-world" \
+  -H "Authorization: Bearer user-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "World"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "message": "Hello, World!",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+## Query Operators
+
+Use PostgREST query operators for filtering:
+
+| Operator | Description | Example |
+|----------|-------------|----------|
+| `eq` | Equals | `?status=eq.active` |
+| `neq` | Not equals | `?status=neq.banned` |
+| `gt` | Greater than | `?age=gt.18` |
+| `gte` | Greater than or equal | `?price=gte.100` |
+| `lt` | Less than | `?stock=lt.10` |
+| `lte` | Less than or equal | `?priority=lte.3` |
+| `like` | Pattern match (case-sensitive) | `?name=like.*Widget*` |
+| `ilike` | Pattern match (case-insensitive) | `?email=ilike.*@gmail.com` |
+| `in` | In list | `?status=in.(pending,active)` |
+| `is` | Exact match (for null) | `?deleted_at=is.null` |
+
+## Error Responses
+
+All errors return a consistent format:
+
+```json
+{
+  "statusCode": 401,
+  "error": "INVALID_CREDENTIALS",
+  "message": "Invalid login credentials",
+  "nextActions": "Check email and password"
+}
+```
+
+**Common Status Codes:**
+
+- `200` - Success
+- `201` - Created
+- `204` - No Content (successful delete)
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `500` - Internal Server Error
+
+## Rate Limiting
+
+API requests are rate-limited based on your plan:
+
+- **Free tier**: 100 requests/minute
+- **Pro tier**: 1000 requests/minute
+- **Enterprise**: Custom limits
+
+Rate limit headers are included in responses:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1705315260
+```
+
+## CORS
+
+CORS is enabled for all origins by default. Configure allowed origins in your InsForge dashboard.
+
+## Examples by Language
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    import requests
+
+    base_url = "https://your-app.region.insforge.app"
+    anon_key = "your-anon-key"
+
+    # Query posts
+    response = requests.get(
+        f"{base_url}/api/db/posts",
+        params={"select": "*", "limit": 10},
+        headers={"apikey": anon_key}
+    )
+    posts = response.json()
+
+    # Create post (authenticated)
+    response = requests.post(
+        f"{base_url}/api/db/posts",
+        json={
+            "title": "New Post",
+            "content": "Hello from Python"
+        },
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+    )
+    new_post = response.json()
+    ```
+  </Tab>
+  <Tab title="Ruby">
+    ```ruby
+    require 'net/http'
+    require 'json'
+
+    base_url = 'https://your-app.region.insforge.app'
+    anon_key = 'your-anon-key'
+
+    # Query posts
+    uri = URI("#{base_url}/api/db/posts?select=*&limit=10")
+    request = Net::HTTP::Get.new(uri)
+    request['apikey'] = anon_key
+    
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+      http.request(request)
+    end
+    
+    posts = JSON.parse(response.body)
+
+    # Create post (authenticated)
+    uri = URI("#{base_url}/api/db/posts")
+    request = Net::HTTP::Post.new(uri)
+    request['Authorization'] = "Bearer #{access_token}"
+    request['Content-Type'] = 'application/json'
+    request['Prefer'] = 'return=representation'
+    request.body = {
+      title: 'New Post',
+      content: 'Hello from Ruby'
+    }.to_json
+    
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+      http.request(request)
+    end
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    package main
+
+    import (
+        "bytes"
+        "encoding/json"
+        "fmt"
+        "net/http"
+    )
+
+    const (
+        baseURL = "https://your-app.region.insforge.app"
+        anonKey = "your-anon-key"
+    )
+
+    func getPosts() ([]map[string]interface{}, error) {
+        req, _ := http.NewRequest("GET", baseURL+"/api/db/posts?select=*&limit=10", nil)
+        req.Header.Set("apikey", anonKey)
+        
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+            return nil, err
+        }
+        defer resp.Body.Close()
+        
+        var posts []map[string]interface{}
+        json.NewDecoder(resp.Body).Decode(&posts)
+        return posts, nil
+    }
+
+    func createPost(accessToken, title, content string) error {
+        data := map[string]string{
+            "title":   title,
+            "content": content,
+        }
+        jsonData, _ := json.Marshal(data)
+        
+        req, _ := http.NewRequest("POST", baseURL+"/api/db/posts", bytes.NewBuffer(jsonData))
+        req.Header.Set("Authorization", "Bearer "+accessToken)
+        req.Header.Set("Content-Type", "application/json")
+        req.Header.Set("Prefer", "return=representation")
+        
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+            return err
+        }
+        defer resp.Body.Close()
+        
+        return nil
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="TypeScript SDK" icon="js" href="/sdks/typescript">
+    Use the official TypeScript SDK for web apps
+  </Card>
+  <Card title="Database Guide" icon="database" href="/guides/database">
+    Learn about database operations
+  </Card>
+  <Card title="Authentication Guide" icon="lock" href="/guides/authentication">
+    Implement user authentication
+  </Card>
+  <Card title="API Examples" icon="code" href="https://github.com/InsForge/examples">
+    Browse REST API examples
+  </Card>
+</CardGroup>

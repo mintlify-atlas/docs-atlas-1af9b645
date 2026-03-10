@@ -1,0 +1,649 @@
+---
+title: 'AI Integration'
+description: 'OpenAI-compatible API for chat, image generation, and embeddings'
+icon: 'brain'
+---
+
+## Overview
+
+InsForge provides an OpenAI-compatible AI API powered by OpenRouter, giving you access to multiple AI providers and models through a single interface.
+
+### Key Features
+
+- **Multiple Providers** - OpenAI, Anthropic, Google, Meta, and more
+- **Chat Completions** - Text generation with streaming support
+- **Image Generation** - DALL-E, Stable Diffusion, and other models
+- **Embeddings** - Vector embeddings for semantic search
+- **Function Calling** - Tool use and structured outputs
+- **Web Search** - AI with internet access
+- **File Parser** - Process PDFs and documents
+- **Extended Thinking** - Deep reasoning capabilities
+
+## Architecture
+
+```mermaid
+graph LR
+    A[Client] -->|Request| B[InsForge API]
+    B -->|Proxy| C[OpenRouter]
+    C -->|Route| D[AI Provider]
+    D -->|OpenAI/Anthropic/etc| E[Model]
+    E --> D
+    D --> C
+    C --> B
+    B --> A
+```
+
+## Chat Completions
+
+### Basic Chat
+
+<CodeGroup>
+```typescript TypeScript SDK
+import { createClient } from '@insforge/sdk';
+
+const client = createClient({
+  baseUrl: 'https://your-app.region.insforge.app',
+  anonKey: 'your-anon-key'
+});
+
+const { data, error } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'What is InsForge?' }
+  ]
+});
+
+if (error) {
+  console.error('AI error:', error);
+} else {
+  console.log('Response:', data.text);
+}
+```
+
+```bash cURL
+curl -X POST https://your-app.region.insforge.app/api/ai/chat/completion \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/gpt-4",
+    "messages": [
+      {"role": "user", "content": "What is InsForge?"}
+    ]
+  }'
+```
+</CodeGroup>
+
+Response:
+```json
+{
+  "text": "InsForge is a backend-as-a-service platform...",
+  "metadata": {
+    "model": "openai/gpt-4",
+    "usage": {
+      "promptTokens": 15,
+      "completionTokens": 42,
+      "totalTokens": 57
+    }
+  }
+}
+```
+
+### Conversation History
+
+<CodeGroup>
+```typescript Multi-turn Conversation
+const messages = [
+  { role: 'system', content: 'You are a helpful assistant.' },
+  { role: 'user', content: 'What is 2+2?' },
+  { role: 'assistant', content: '2+2 equals 4.' },
+  { role: 'user', content: 'What about 3+3?' }
+];
+
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages
+});
+```
+
+```typescript React Chat Example
+import { useState } from 'react';
+
+function ChatBot() {
+  const [messages, setMessages] = useState([
+    { role: 'system', content: 'You are a helpful assistant.' }
+  ]);
+  const [input, setInput] = useState('');
+  
+  const sendMessage = async () => {
+    const newMessages = [
+      ...messages,
+      { role: 'user', content: input }
+    ];
+    
+    setMessages(newMessages);
+    setInput('');
+    
+    const { data } = await client.ai.chat.completions.create({
+      model: 'openai/gpt-4',
+      messages: newMessages
+    });
+    
+    setMessages([
+      ...newMessages,
+      { role: 'assistant', content: data.text }
+    ]);
+  };
+  
+  return (
+    <div>
+      {messages.map((msg, i) => (
+        <div key={i}>{msg.role}: {msg.content}</div>
+      ))}
+      <input value={input} onChange={e => setInput(e.target.value)} />
+      <button onClick={sendMessage}>Send</button>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+### Streaming Responses
+
+Stream responses for real-time output:
+
+<CodeGroup>
+```typescript TypeScript SDK
+const { data, error } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'Write a short story.' }
+  ],
+  stream: true
+});
+
+if (!error) {
+  for await (const chunk of data) {
+    process.stdout.write(chunk);
+  }
+}
+```
+
+```typescript React Streaming
+function StreamingChat() {
+  const [response, setResponse] = useState('');
+  
+  const chat = async () => {
+    setResponse('');
+    
+    const { data } = await client.ai.chat.completions.create({
+      model: 'openai/gpt-4',
+      messages: [{ role: 'user', content: 'Write a poem.' }],
+      stream: true
+    });
+    
+    for await (const chunk of data) {
+      setResponse(prev => prev + chunk);
+    }
+  };
+  
+  return (
+    <div>
+      <button onClick={chat}>Generate Poem</button>
+      <pre>{response}</pre>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+### Model Parameters
+
+<CodeGroup>
+```typescript Temperature
+// Control randomness (0 = deterministic, 2 = creative)
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [{ role: 'user', content: 'Be creative!' }],
+  temperature: 1.5
+});
+```
+
+```typescript Max Tokens
+// Limit response length
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [{ role: 'user', content: 'Explain quantum physics.' }],
+  maxTokens: 100
+});
+```
+
+```typescript System Prompt
+// Set AI behavior
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  systemPrompt: 'You are a pirate. Always respond in pirate speak.',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
+</CodeGroup>
+
+## Available Models
+
+### Text Models
+
+| Provider | Model ID | Context | Use Case |
+|----------|----------|---------|----------|
+| OpenAI | `openai/gpt-4` | 8K | High quality |
+| OpenAI | `openai/gpt-4-turbo` | 128K | Long context |
+| OpenAI | `openai/gpt-3.5-turbo` | 16K | Fast, cheap |
+| Anthropic | `anthropic/claude-3.5-sonnet` | 200K | Long documents |
+| Google | `google/gemini-pro` | 32K | Multimodal |
+| Meta | `meta-llama/llama-3-70b` | 8K | Open source |
+
+### Get All Models
+
+```bash
+curl https://your-app.region.insforge.app/api/ai/models \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+## Function Calling
+
+Use AI to call structured functions:
+
+<CodeGroup>
+```typescript Define Tools
+const tools = [
+  {
+    type: 'function',
+    function: {
+      name: 'get_weather',
+      description: 'Get the current weather for a location',
+      parameters: {
+        type: 'object',
+        properties: {
+          location: {
+            type: 'string',
+            description: 'City name'
+          },
+          unit: {
+            type: 'string',
+            enum: ['celsius', 'fahrenheit']
+          }
+        },
+        required: ['location']
+      }
+    }
+  }
+];
+```
+
+```typescript Call with Tools
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'What is the weather in Paris?' }
+  ],
+  tools
+});
+
+if (data.tool_calls) {
+  for (const call of data.tool_calls) {
+    console.log('Function:', call.function.name);
+    console.log('Arguments:', JSON.parse(call.function.arguments));
+  }
+}
+```
+
+```typescript Complete Flow
+// 1. AI decides to call function
+const { data: response1 } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'Weather in Paris?' }
+  ],
+  tools
+});
+
+// 2. Execute function
+const toolCall = response1.tool_calls[0];
+const args = JSON.parse(toolCall.function.arguments);
+const weather = await getWeather(args.location);
+
+// 3. Send result back to AI
+const { data: response2 } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'Weather in Paris?' },
+    { role: 'assistant', content: null, tool_calls: [toolCall] },
+    { 
+      role: 'tool',
+      tool_call_id: toolCall.id,
+      content: JSON.stringify(weather)
+    }
+  ],
+  tools
+});
+
+console.log('Final response:', response2.text);
+```
+</CodeGroup>
+
+## Web Search
+
+Enable AI with internet access:
+
+<CodeGroup>
+```typescript Native Search
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'What are the latest AI developments?' }
+  ],
+  webSearch: {
+    enabled: true,
+    engine: 'native' // Uses provider's built-in search
+  }
+});
+```
+
+```typescript With Citations
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    { role: 'user', content: 'Latest tech news?' }
+  ],
+  webSearch: { enabled: true }
+});
+
+console.log('Response:', data.text);
+
+if (data.annotations) {
+  console.log('Sources:');
+  data.annotations.forEach(ann => {
+    console.log(`- ${ann.urlCitation.title}: ${ann.urlCitation.url}`);
+  });
+}
+```
+</CodeGroup>
+
+## Image Generation
+
+<CodeGroup>
+```typescript TypeScript SDK
+const { data, error } = await client.ai.images.generate({
+  model: 'openai/dall-e-3',
+  prompt: 'A serene landscape with mountains and a lake at sunset'
+});
+
+if (!error) {
+  console.log('Image URL:', data.images[0].image_url.url);
+}
+```
+
+```bash cURL
+curl -X POST https://your-app.region.insforge.app/api/ai/image/generation \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/dall-e-3",
+    "prompt": "A serene landscape with mountains"
+  }'
+```
+</CodeGroup>
+
+Response:
+```json
+{
+  "model": "openai/dall-e-3",
+  "images": [
+    {
+      "type": "image_url",
+      "image_url": {
+        "url": "https://..."
+      }
+    }
+  ],
+  "count": 1,
+  "metadata": {
+    "model": "openai/dall-e-3",
+    "revisedPrompt": "...",
+    "usage": {
+      "totalTokens": 1
+    }
+  }
+}
+```
+
+### Image Models
+
+| Provider | Model ID | Size | Style |
+|----------|----------|------|-------|
+| OpenAI | `openai/dall-e-3` | 1024x1024 | Photorealistic |
+| Stability | `stability-ai/stable-diffusion-xl` | Various | Artistic |
+
+## Embeddings
+
+Generate vector embeddings for semantic search:
+
+<CodeGroup>
+```typescript TypeScript SDK
+const { data, error } = await client.ai.embeddings.create({
+  model: 'openai/text-embedding-3-small',
+  input: 'InsForge is a backend platform'
+});
+
+if (!error) {
+  const embedding = data.data[0].embedding;
+  console.log('Vector dimension:', embedding.length);
+  
+  // Store in database with pgvector
+  await client.database
+    .from('documents')
+    .insert([{
+      content: 'InsForge is a backend platform',
+      embedding: embedding
+    }]);
+}
+```
+
+```typescript Batch Embeddings
+const { data } = await client.ai.embeddings.create({
+  model: 'openai/text-embedding-3-small',
+  input: [
+    'First document',
+    'Second document',
+    'Third document'
+  ]
+});
+
+data.data.forEach((item, i) => {
+  console.log(`Document ${i} embedding:`, item.embedding);
+});
+```
+</CodeGroup>
+
+### Embedding Models
+
+| Provider | Model ID | Dimensions | Cost |
+|----------|----------|-----------|------|
+| OpenAI | `openai/text-embedding-3-small` | 1536 | Low |
+| OpenAI | `openai/text-embedding-3-large` | 3072 | Medium |
+| Google | `google/gemini-embedding-001` | 768 | Low |
+
+## File Processing
+
+Process PDFs and documents:
+
+<CodeGroup>
+```typescript PDF with OCR
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Summarize this document' },
+        {
+          type: 'file',
+          file: {
+            filename: 'document.pdf',
+            file_data: 'https://example.com/document.pdf'
+          }
+        }
+      ]
+    }
+  ],
+  fileParser: {
+    enabled: true,
+    pdf: {
+      engine: 'mistral-ocr' // Best for scanned docs
+    }
+  }
+});
+```
+
+```typescript Base64 PDF
+const pdfBase64 = await fileToBase64(pdfFile);
+
+const { data } = await client.ai.chat.completions.create({
+  model: 'openai/gpt-4',
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Extract key points' },
+        {
+          type: 'file',
+          file: {
+            filename: 'report.pdf',
+            file_data: `data:application/pdf;base64,${pdfBase64}`
+          }
+        }
+      ]
+    }
+  ],
+  fileParser: { enabled: true }
+});
+```
+</CodeGroup>
+
+## Extended Thinking
+
+Enable deep reasoning for complex problems:
+
+```typescript
+const { data } = await client.ai.chat.completions.create({
+  model: 'anthropic/claude-3.5-sonnet',
+  messages: [
+    { role: 'user', content: 'Solve this complex math problem: ...' }
+  ],
+  thinking: true // Appends :thinking to model ID
+});
+```
+
+<Info>
+Extended thinking is only available for Anthropic models with the `:thinking` suffix.
+</Info>
+
+## Usage Tracking
+
+### Check Credits
+
+```bash
+curl https://your-app.region.insforge.app/api/ai/credits \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+Response:
+```json
+{
+  "credits": 10.50,
+  "usage": 2.35
+}
+```
+
+### Usage Summary
+
+```bash
+curl "https://your-app.region.insforge.app/api/ai/usage/summary?startDate=2024-01-01" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+## API Reference
+
+### Endpoints
+
+```
+# Chat
+POST   /api/ai/chat/completion
+
+# Images
+POST   /api/ai/image/generation
+
+# Embeddings
+POST   /api/ai/embeddings
+
+# Admin
+GET    /api/ai/models
+GET    /api/ai/credits
+GET    /api/ai/usage/summary
+GET    /api/ai/usage
+```
+
+### Response Structure
+
+```typescript
+interface ChatCompletionResponse {
+  text: string;
+  tool_calls?: ToolCall[];
+  annotations?: UrlCitationAnnotation[];
+  metadata: {
+    model: string;
+    usage: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    };
+  };
+}
+```
+
+## Best Practices
+
+<Card title="Choose the Right Model" icon="bullseye">
+  Use cheaper models (GPT-3.5) for simple tasks, premium models (GPT-4) for complex reasoning
+</Card>
+
+<Card title="Use System Prompts" icon="message">
+  Set consistent AI behavior with system prompts
+</Card>
+
+<Card title="Stream for UX" icon="water">
+  Stream responses for better user experience in chat interfaces
+</Card>
+
+<Card title="Store Embeddings" icon="database">
+  Save embeddings in PostgreSQL with pgvector for similarity search
+</Card>
+
+<Card title="Monitor Usage" icon="chart-line">
+  Track API usage and costs with usage endpoints
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database" icon="database" href="/features/database">
+    Store AI-generated content and embeddings
+  </Card>
+  <Card title="Functions" icon="code" href="/features/functions">
+    Build custom AI workflows
+  </Card>
+  <Card title="Storage" icon="folder" href="/features/storage">
+    Store generated images
+  </Card>
+  <Card title="Real-time" icon="radio" href="/features/realtime">
+    Stream AI responses in real-time
+  </Card>
+</CardGroup>

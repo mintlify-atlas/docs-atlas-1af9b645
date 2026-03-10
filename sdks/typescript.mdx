@@ -1,0 +1,267 @@
+---
+title: TypeScript SDK
+description: Official TypeScript/JavaScript SDK for InsForge with complete type safety and modern tooling
+---
+
+The InsForge TypeScript SDK provides a fully type-safe client for building web applications with InsForge services. It works seamlessly with JavaScript, TypeScript, React, Next.js, and other modern frameworks.
+
+## Installation
+
+Install the SDK via npm:
+
+```bash
+npm install @insforge/sdk@latest
+```
+
+## Quick Start
+
+### 1. Create Client Instance
+
+Create an InsForge client with your backend URL and anon key:
+
+```typescript
+import { createClient } from '@insforge/sdk';
+
+const insforge = createClient({
+  baseUrl: 'https://your-app.region.insforge.app',
+  anonKey: 'your-anon-key-here'  // Optional: for public/unauthenticated requests
+});
+```
+
+<Note>
+  Get your `baseUrl` and `anonKey` from your InsForge dashboard or by calling the `get-backend-metadata` MCP tool.
+</Note>
+
+### 2. Use SDK Features
+
+The SDK provides access to all InsForge services:
+
+```typescript
+// Database operations
+const { data: posts } = await insforge.database
+  .from('posts')
+  .select('*')
+  .order('created_at', { ascending: false })
+  .limit(10);
+
+// Authentication
+const { data, error } = await insforge.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'secure_password'
+});
+
+// Storage
+const { data: upload } = await insforge.storage
+  .from('images')
+  .upload('path/to/file.jpg', fileObject);
+
+// AI operations
+const completion = await insforge.ai.chat.completions.create({
+  model: 'anthropic/claude-3.5-haiku',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+
+// Realtime subscriptions
+await insforge.realtime.connect();
+await insforge.realtime.subscribe('chat:room-1');
+insforge.realtime.on('new_message', (msg) => console.log(msg));
+```
+
+## Core Features
+
+<CardGroup cols={2}>
+  <Card title="Database" icon="database" href="/sdks/typescript/database">
+    Type-safe CRUD operations with PostgREST
+  </Card>
+  <Card title="Authentication" icon="lock" href="/sdks/typescript/auth">
+    Email/password and OAuth authentication
+  </Card>
+  <Card title="Storage" icon="cloud-arrow-up" href="/sdks/typescript/storage">
+    File upload, download, and management
+  </Card>
+  <Card title="Functions" icon="bolt" href="/sdks/typescript/functions">
+    Invoke serverless edge functions
+  </Card>
+  <Card title="AI" icon="brain" href="/sdks/typescript/ai">
+    Chat completions and image generation
+  </Card>
+  <Card title="Realtime" icon="signal-stream" href="/sdks/typescript/realtime">
+    WebSocket pub/sub messaging
+  </Card>
+</CardGroup>
+
+## Framework-Specific Packages
+
+For React and Next.js applications, InsForge provides additional packages with pre-built UI components:
+
+### @insforge/react
+
+Pre-built authentication components for React + Vite (single-page apps):
+
+```bash
+npm install @insforge/react@latest
+```
+
+```tsx
+import { InsforgeProvider, SignInButton, useUser } from '@insforge/react';
+
+// Wrap your app
+<InsforgeProvider client={insforge}>
+  <App />
+</InsforgeProvider>
+
+// Use authentication hooks
+function Profile() {
+  const { user } = useUser();
+  return <div>Welcome {user?.email}</div>;
+}
+```
+
+[Learn more about React components →](/integration/ui-components#react-vite)
+
+### @insforge/nextjs
+
+Pre-built authentication components for Next.js with SSR support:
+
+```bash
+npm install @insforge/nextjs@latest
+```
+
+```tsx
+import { InsforgeProvider, SignInButton } from '@insforge/nextjs';
+
+// Server-side rendering support
+export default function RootLayout({ children }) {
+  return (
+    <InsforgeProvider>
+      {children}
+    </InsforgeProvider>
+  );
+}
+```
+
+[Learn more about Next.js components →](/integration/ui-components#nextjs)
+
+## Response Structure
+
+All SDK methods return a consistent `{ data, error }` structure:
+
+```typescript
+const { data, error } = await insforge.database
+  .from('posts')
+  .select('*');
+
+if (error) {
+  console.error('Error:', error.message);
+  return;
+}
+
+console.log('Data:', data);
+```
+
+### Error Handling
+
+Errors include detailed information for debugging:
+
+```typescript
+if (error) {
+  console.error(error.statusCode);   // HTTP status code
+  console.error(error.error);        // Error code (e.g., 'INVALID_CREDENTIALS')
+  console.error(error.message);      // Human-readable message
+  console.error(error.nextActions);  // Suggested next steps
+}
+```
+
+## Type Safety
+
+The SDK is fully typed for TypeScript projects:
+
+```typescript
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+}
+
+const { data } = await insforge.database
+  .from('posts')
+  .select<Post>('*');
+
+// data is typed as Post[]
+data?.forEach(post => {
+  console.log(post.title); // TypeScript knows this exists
+});
+```
+
+## Environment Variables
+
+Store your InsForge credentials securely:
+
+<Tabs>
+  <Tab title="Vite">
+    ```bash .env
+    VITE_INSFORGE_BASE_URL=https://your-app.region.insforge.app
+    VITE_INSFORGE_ANON_KEY=your-anon-key-here
+    ```
+
+    ```typescript src/lib/insforge.ts
+    import { createClient } from '@insforge/sdk';
+
+    export const insforge = createClient({
+      baseUrl: import.meta.env.VITE_INSFORGE_BASE_URL,
+      anonKey: import.meta.env.VITE_INSFORGE_ANON_KEY
+    });
+    ```
+  </Tab>
+  <Tab title="Next.js">
+    ```bash .env.local
+    NEXT_PUBLIC_INSFORGE_BASE_URL=https://your-app.region.insforge.app
+    NEXT_PUBLIC_INSFORGE_ANON_KEY=your-anon-key-here
+    ```
+
+    ```typescript lib/insforge.ts
+    import { createClient } from '@insforge/sdk';
+
+    export const insforge = createClient({
+      baseUrl: process.env.NEXT_PUBLIC_INSFORGE_BASE_URL!,
+      anonKey: process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!
+    });
+    ```
+  </Tab>
+  <Tab title="Node.js">
+    ```bash .env
+    INSFORGE_BASE_URL=https://your-app.region.insforge.app
+    INSFORGE_ANON_KEY=your-anon-key-here
+    ```
+
+    ```typescript
+    import { createClient } from '@insforge/sdk';
+    import * as dotenv from 'dotenv';
+
+    dotenv.config();
+
+    export const insforge = createClient({
+      baseUrl: process.env.INSFORGE_BASE_URL!,
+      anonKey: process.env.INSFORGE_ANON_KEY!
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Operations" icon="database" href="/sdks/typescript/database">
+    Learn about CRUD operations, filters, and queries
+  </Card>
+  <Card title="Authentication" icon="lock" href="/sdks/typescript/auth">
+    Implement user sign-up, sign-in, and OAuth
+  </Card>
+  <Card title="UI Components" icon="window" href="/integration/ui-components">
+    Use pre-built auth components for React/Next.js
+  </Card>
+  <Card title="MCP Tools" icon="wrench" href="/integration/mcp-tools">
+    Infrastructure management via MCP
+  </Card>
+</CardGroup>

@@ -1,0 +1,564 @@
+---
+title: MCP Tools Reference
+description: Model Context Protocol tools for infrastructure management and backend operations
+---
+
+InsForge provides MCP (Model Context Protocol) tools for AI agents to manage backend infrastructure, deploy applications, and fetch documentation. These tools enable AI coding assistants to work directly with your InsForge backend.
+
+<Note>
+  MCP tools are for **infrastructure management** (creating tables, deploying functions, managing buckets). Use the [SDK](/sdks/typescript) for **application logic** (auth, database queries, file uploads).
+</Note>
+
+## Installation
+
+The InsForge MCP server is automatically available when you run InsForge locally:
+
+```bash
+docker compose up
+```
+
+Access the dashboard at `http://localhost:7130` and follow the connection instructions for your AI agent.
+
+## Documentation Tools
+
+### fetch-docs
+
+Fetch specific SDK documentation for building applications.
+
+**Parameters:**
+- `type` (required) - Documentation type to fetch
+
+**Available types:**
+- `"instructions"` - Essential backend setup (START HERE)
+- `"db-sdk-typescript"` - Database operations with TypeScript SDK
+- `"auth-sdk-typescript"` - TypeScript SDK auth methods
+- `"auth-components-react"` - Pre-built React auth UI (Vite)
+- `"auth-components-react-router"` - Pre-built React auth UI (React Router)
+- `"auth-components-nextjs"` - Pre-built Next.js auth UI
+- `"storage-sdk"` - File storage operations
+- `"functions-sdk"` - Serverless functions invocation
+- `"ai-integration-sdk"` - AI chat and image generation
+- `"real-time"` - Real-time pub/sub via WebSockets
+- `"deployment"` - Deploy frontend applications
+
+**Example:**
+
+```typescript
+// Agent call
+fetch_docs({ type: "auth-sdk-typescript" })
+```
+
+**Returns:** Detailed SDK documentation with code examples and API reference.
+
+---
+
+### fetch-sdk-docs
+
+Fetch SDK documentation for specific features and languages.
+
+**Parameters:**
+- `feature` (required) - Feature type: `"db"`, `"storage"`, `"functions"`, `"auth"`, `"ai"`, `"realtime"`
+- `language` (required) - SDK language: `"typescript"`, `"swift"`, `"kotlin"`, `"rest-api"`
+
+**Example:**
+
+```typescript
+// Get Swift SDK auth documentation
+fetch_sdk_docs({ 
+  feature: "auth", 
+  language: "swift" 
+})
+
+// Get Kotlin database documentation
+fetch_sdk_docs({ 
+  feature: "db", 
+  language: "kotlin" 
+})
+```
+
+**Returns:** Language-specific SDK documentation with examples.
+
+---
+
+## Backend Management
+
+### get-backend-metadata
+
+Retrieve backend configuration and connection details.
+
+**Parameters:** None
+
+**Example:**
+
+```typescript
+get_backend_metadata()
+```
+
+**Returns:**
+
+```json
+{
+  "baseUrl": "https://your-app.region.insforge.app",
+  "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "region": "us-west-1",
+  "version": "2.0.1",
+  "features": {
+    "auth": true,
+    "storage": true,
+    "functions": true,
+    "ai": true,
+    "realtime": true
+  }
+}
+```
+
+---
+
+## Database Tools
+
+### run-raw-sql
+
+Execute raw SQL queries on your PostgreSQL database.
+
+**Parameters:**
+- `sql` (required) - SQL query to execute
+- `params` (optional) - Parameterized query values
+
+**Example:**
+
+```typescript
+// Create a table
+run_raw_sql({
+  sql: `
+    CREATE TABLE posts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      content TEXT,
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `
+})
+
+// Create an index
+run_raw_sql({
+  sql: "CREATE INDEX idx_posts_user_id ON posts(user_id)"
+})
+
+// Parameterized query
+run_raw_sql({
+  sql: "SELECT * FROM posts WHERE user_id = $1",
+  params: ["user-123"]
+})
+```
+
+<Warning>
+  Use with caution. Raw SQL bypasses Row Level Security (RLS) policies. Prefer using the SDK for application queries.
+</Warning>
+
+---
+
+### get-table-schema
+
+Retrieve the schema definition for a database table.
+
+**Parameters:**
+- `tableName` (required) - Name of the table
+
+**Example:**
+
+```typescript
+get_table_schema({ tableName: "posts" })
+```
+
+**Returns:**
+
+```json
+{
+  "tableName": "posts",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "title",
+      "type": "text",
+      "nullable": false
+    },
+    {
+      "name": "content",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "default": "NOW()"
+    }
+  ],
+  "primaryKey": ["id"],
+  "foreignKeys": [
+    {
+      "column": "user_id",
+      "references": "users(id)",
+      "onDelete": "CASCADE"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_posts_user_id",
+      "columns": ["user_id"]
+    }
+  ]
+}
+```
+
+---
+
+## Storage Tools
+
+### create-bucket
+
+Create a new storage bucket for file uploads.
+
+**Parameters:**
+- `name` (required) - Bucket name (lowercase, alphanumeric, hyphens)
+- `public` (optional) - Whether bucket is publicly accessible (default: false)
+
+**Example:**
+
+```typescript
+// Create public bucket for user avatars
+create_bucket({ 
+  name: "avatars", 
+  public: true 
+})
+
+// Create private bucket for documents
+create_bucket({ 
+  name: "documents", 
+  public: false 
+})
+```
+
+**Returns:**
+
+```json
+{
+  "name": "avatars",
+  "public": true,
+  "createdAt": "2024-01-15T10:00:00Z"
+}
+```
+
+---
+
+### list-buckets
+
+List all storage buckets in your backend.
+
+**Parameters:** None
+
+**Example:**
+
+```typescript
+list_buckets()
+```
+
+**Returns:**
+
+```json
+[
+  {
+    "name": "avatars",
+    "public": true,
+    "createdAt": "2024-01-15T10:00:00Z"
+  },
+  {
+    "name": "documents",
+    "public": false,
+    "createdAt": "2024-01-16T09:30:00Z"
+  }
+]
+```
+
+---
+
+### delete-bucket
+
+Delete a storage bucket and all its contents.
+
+**Parameters:**
+- `name` (required) - Bucket name to delete
+
+**Example:**
+
+```typescript
+delete_bucket({ name: "old-bucket" })
+```
+
+<Warning>
+  This permanently deletes all files in the bucket. This action cannot be undone.
+</Warning>
+
+---
+
+## Functions Tools
+
+### create-function
+
+Deploy a new serverless edge function.
+
+**Parameters:**
+- `slug` (required) - Function name/slug (URL-safe)
+- `code` (required) - Function code (TypeScript/JavaScript)
+- `description` (optional) - Function description
+
+**Example:**
+
+```typescript
+create_function({
+  slug: "hello-world",
+  description: "A simple greeting function",
+  code: `
+    export default async function(req: Request): Promise<Response> {
+      const { name } = await req.json();
+      
+      return new Response(
+        JSON.stringify({ 
+          message: \`Hello, \${name || 'World'}!\`,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+  `
+})
+```
+
+**Returns:**
+
+```json
+{
+  "slug": "hello-world",
+  "url": "https://your-app.region.insforge.app/api/functions/hello-world",
+  "createdAt": "2024-01-15T10:00:00Z"
+}
+```
+
+---
+
+### update-function
+
+Update an existing serverless function.
+
+**Parameters:**
+- `slug` (required) - Function slug to update
+- `code` (required) - New function code
+- `description` (optional) - Updated description
+
+**Example:**
+
+```typescript
+update_function({
+  slug: "hello-world",
+  code: `
+    export default async function(req: Request): Promise<Response> {
+      const { name } = await req.json();
+      
+      // Updated with greeting customization
+      const greeting = req.headers.get('X-Greeting') || 'Hello';
+      
+      return new Response(
+        JSON.stringify({ 
+          message: \`\${greeting}, \${name || 'World'}!\`
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  `
+})
+```
+
+---
+
+### delete-function
+
+Delete a serverless function.
+
+**Parameters:**
+- `slug` (required) - Function slug to delete
+
+**Example:**
+
+```typescript
+delete_function({ slug: "old-function" })
+```
+
+---
+
+### list-functions
+
+List all deployed serverless functions.
+
+**Parameters:** None
+
+**Example:**
+
+```typescript
+list_functions()
+```
+
+**Returns:**
+
+```json
+[
+  {
+    "slug": "hello-world",
+    "description": "A simple greeting function",
+    "url": "https://your-app.region.insforge.app/api/functions/hello-world",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "updatedAt": "2024-01-15T11:00:00Z"
+  }
+]
+```
+
+---
+
+## Deployment Tools
+
+### download-template
+
+Download a starter template pre-configured with your InsForge backend.
+
+**Parameters:**
+- `template` (required) - Template name: `"react-vite"`, `"nextjs"`, `"vue"`, `"svelte"`
+- `outputPath` (required) - Local directory path for the template
+
+**Example:**
+
+```typescript
+download_template({
+  template: "react-vite",
+  outputPath: "./my-app"
+})
+```
+
+**Returns:**
+
+```json
+{
+  "template": "react-vite",
+  "path": "./my-app",
+  "configured": true,
+  "nextSteps": [
+    "cd my-app",
+    "npm install",
+    "npm run dev"
+  ]
+}
+```
+
+---
+
+### create-deployment
+
+Deploy a frontend application to InsForge hosting.
+
+**Parameters:**
+- `buildDirectory` (required) - Path to build output directory
+- `projectName` (optional) - Custom project name
+
+**Example:**
+
+```typescript
+// After building your app
+create_deployment({
+  buildDirectory: "./dist",
+  projectName: "my-app"
+})
+```
+
+**Returns:**
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "url": "https://my-app.insforge.app",
+  "status": "deployed",
+  "createdAt": "2024-01-15T10:00:00Z"
+}
+```
+
+---
+
+## Usage Best Practices
+
+### When to Use MCP Tools
+
+✅ **Use MCP tools for:**
+- Creating database tables and schemas
+- Managing storage buckets
+- Deploying serverless functions
+- Fetching documentation for AI agents
+- Infrastructure setup and configuration
+
+❌ **Don't use MCP tools for:**
+- Application authentication (use SDK `auth` methods)
+- Database queries in your app (use SDK `database` methods)
+- File uploads from users (use SDK `storage` methods)
+- Real-time messaging (use SDK `realtime` methods)
+
+### Example Workflow
+
+```typescript
+// 1. Agent creates infrastructure with MCP tools
+run_raw_sql({
+  sql: `
+    CREATE TABLE posts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      content TEXT,
+      user_id UUID REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `
+})
+
+create_bucket({ name: "post-images", public: true })
+
+// 2. Agent fetches SDK docs
+fetch_docs({ type: "db-sdk-typescript" })
+
+// 3. Agent writes application code using SDK
+// (This is JavaScript/TypeScript code, not MCP tool calls)
+import { insforge } from './lib/insforge';
+
+const { data: posts } = await insforge.database
+  .from('posts')
+  .select('*');
+```
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="TypeScript SDK" icon="js" href="/sdks/typescript">
+    Use SDK for application logic
+  </Card>
+  <Card title="Database Guide" icon="database" href="/guides/database">
+    Learn about database operations
+  </Card>
+  <Card title="Functions Guide" icon="bolt" href="/guides/functions">
+    Deploy serverless functions
+  </Card>
+  <Card title="Storage Guide" icon="cloud" href="/guides/storage">
+    Manage file storage
+  </Card>
+</CardGroup>

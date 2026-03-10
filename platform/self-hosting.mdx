@@ -1,0 +1,744 @@
+---
+title: 'Self-Hosting Guide'
+description: 'Complete guide to deploying InsForge on your own infrastructure using Docker Compose'
+---
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- **Docker:** Version 20.10 or higher
+- **Docker Compose:** Version 2.0 or higher
+- **Node.js:** Version 18+ (for local development)
+- **System Requirements:**
+  - Minimum: 2 CPU cores, 4GB RAM, 20GB disk
+  - Recommended: 4 CPU cores, 8GB RAM, 50GB disk
+
+**Install Docker:**
+
+<CodeGroup>
+
+```bash macOS
+# Install Docker Desktop for Mac
+brew install --cask docker
+
+# Start Docker Desktop from Applications
+open -a Docker
+```
+
+```bash Ubuntu/Debian
+# Install Docker Engine
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Add your user to docker group
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Install Docker Compose
+sudo apt-get update
+sudo apt-get install docker-compose-plugin
+```
+
+```bash Windows
+# Download and install Docker Desktop for Windows
+# https://docs.docker.com/desktop/install/windows-install/
+
+# After installation, open PowerShell and verify:
+docker --version
+docker compose version
+```
+
+</CodeGroup>
+
+**Verify Installation:**
+
+```bash
+docker --version
+# Docker version 24.0.0 or higher
+
+docker compose version
+# Docker Compose version v2.20.0 or higher
+```
+
+## Quick Start
+
+### 1. Clone Repository
+
+```bash
+git clone https://github.com/insforge/insforge.git
+cd insforge
+```
+
+### 2. Configure Environment
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration:
+
+```bash:.env
+# Server Configuration
+PORT=7130
+
+# PostgreSQL Configuration
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change-this-secure-password
+POSTGRES_DB=insforge
+
+# API Base URLs
+API_BASE_URL=http://localhost:7130
+VITE_API_BASE_URL=http://localhost:7130
+
+# Authentication (CRITICAL: Change these!)
+JWT_SECRET=your-secret-key-minimum-32-characters-recommended-64
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-this-admin-password
+
+# Encryption key for secrets (uses JWT_SECRET if not set)
+ENCRYPTION_KEY=different-key-from-jwt-32-chars-minimum
+
+# API Key (optional - auto-generated if not provided)
+ACCESS_API_KEY=ik_your-api-key-here-32-chars-minimum
+```
+
+<Warning>
+**Security Critical:** Always change `JWT_SECRET`, `ADMIN_PASSWORD`, and `POSTGRES_PASSWORD` before deploying to production.
+
+Generate secure secrets:
+```bash
+# Generate JWT_SECRET (64 characters)
+openssl rand -base64 48
+
+# Generate ENCRYPTION_KEY (32 characters hex)
+openssl rand -hex 32
+
+# Generate strong password
+openssl rand -base64 24
+```
+</Warning>
+
+### 3. Launch Services
+
+**Production Deployment:**
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Development Mode:**
+
+```bash
+docker compose up -d
+```
+
+### 4. Verify Installation
+
+Wait for all services to start (1-2 minutes):
+
+```bash
+# Check container status
+docker compose ps
+
+# Should show all services as "running" and "healthy"
+# - insforge-postgres    (healthy)
+# - insforge-postgrest   (running)
+# - insforge             (running)
+# - insforge-deno        (running)
+# - insforge-vector      (healthy)
+```
+
+**Access the Dashboard:**
+
+Open http://localhost:7131 in your browser.
+
+**Default Admin Credentials:**
+- Email: `admin@example.com` (from `.env`)
+- Password: Value of `ADMIN_PASSWORD` in `.env`
+
+### 5. Connect InsForge MCP
+
+Follow the onboarding wizard to connect your AI coding agent:
+
+1. Log in to dashboard at http://localhost:7131
+2. Navigate to "Settings" → "MCP Integration"
+3. Copy the MCP server configuration
+4. Add to your AI agent's MCP settings
+
+## Configuration Reference
+
+### Environment Variables
+
+#### Core Settings
+
+```bash:.env
+# Server port for backend API
+PORT=7130
+
+# Public URLs for API access
+API_BASE_URL=http://localhost:7130
+VITE_API_BASE_URL=http://localhost:7130
+```
+
+#### Database Settings
+
+```bash:.env
+# PostgreSQL connection
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-secure-password
+POSTGRES_DB=insforge
+
+# Full connection string (auto-generated)
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+```
+
+#### Authentication
+
+```bash:.env
+# JWT signing secret (min 32 chars, recommended 64)
+JWT_SECRET=your-secret-key-here-must-be-32-char-or-above
+
+# Admin credentials
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-this-password
+
+# Encryption key for sensitive data
+ENCRYPTION_KEY=your-encryption-key-32-chars-minimum
+
+# Project API key (auto-generated if not set)
+ACCESS_API_KEY=ik_your-api-key-here-32-chars-minimum
+```
+
+#### Storage Configuration
+
+**Option 1: Local Storage (Development)**
+
+```bash:.env
+# Leave S3 settings empty to use local filesystem
+# Files stored in Docker volume: storage-data
+STORAGE_DIR=/insforge-storage
+```
+
+**Option 2: AWS S3**
+
+```bash:.env
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=your-bucket-name
+
+# Optional: CloudFront CDN
+AWS_CLOUDFRONT_URL=https://your-distribution.cloudfront.net
+AWS_CLOUDFRONT_KEY_PAIR_ID=your-key-pair-id
+AWS_CLOUDFRONT_PRIVATE_KEY=your-private-key
+```
+
+**Option 3: S3-Compatible (Wasabi, MinIO, etc.)**
+
+```bash:.env
+S3_ACCESS_KEY_ID=your-s3-access-key
+S3_SECRET_ACCESS_KEY=your-s3-secret-key
+S3_ENDPOINT_URL=https://s3.wasabisys.com
+AWS_S3_BUCKET=your-bucket-name
+AWS_REGION=us-east-1
+```
+
+#### OAuth Configuration (Optional)
+
+```bash:.env
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-secret
+
+# Microsoft OAuth
+MICROSOFT_CLIENT_ID=your-microsoft-client-id
+MICROSOFT_CLIENT_SECRET=your-microsoft-secret
+
+# Discord OAuth
+DISCORD_CLIENT_ID=your-discord-client-id
+DISCORD_CLIENT_SECRET=your-discord-secret
+
+# LinkedIn OAuth
+LINKEDIN_CLIENT_ID=your-linkedin-client-id
+LINKEDIN_CLIENT_SECRET=your-linkedin-secret
+
+# X (Twitter) OAuth
+X_CLIENT_ID=your-x-client-id
+X_CLIENT_SECRET=your-x-secret
+
+# Apple OAuth
+APPLE_CLIENT_ID=com.yourapp.service
+APPLE_CLIENT_SECRET={"teamId":"...","keyId":"...","privateKey":"..."}
+```
+
+OAuth setup guides:
+- [Google OAuth Setup](https://github.com/insforge/insforge/blob/main/GOOGLE_OAUTH_SETUP.md)
+- [GitHub OAuth Setup](https://github.com/insforge/insforge/blob/main/GITHUB_OAUTH_SETUP.md)
+
+#### AI Model Gateway (Optional)
+
+```bash:.env
+# OpenRouter API key for AI features
+OPENROUTER_API_KEY=your-openrouter-api-key
+```
+
+Get API key: [openrouter.ai/keys](https://openrouter.ai/keys)
+
+#### Logging Configuration
+
+**Option 1: File-Based Logs (Default)**
+
+```bash:.env
+# Logs stored in Docker volume: shared-logs
+LOGS_DIR=/insforge-logs
+```
+
+**Option 2: AWS CloudWatch**
+
+```bash:.env
+# Enable CloudWatch by setting AWS credentials
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_REGION=us-east-1
+```
+
+## Docker Compose Commands
+
+### Starting Services
+
+```bash
+# Start all services (production)
+docker compose -f docker-compose.prod.yml up -d
+
+# Start with logs visible
+docker compose -f docker-compose.prod.yml up
+
+# Start specific service
+docker compose up postgres -d
+```
+
+### Stopping Services
+
+```bash
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (DELETES DATA!)
+docker compose down -v
+```
+
+### Viewing Logs
+
+```bash
+# View all logs
+docker compose logs
+
+# Follow logs in real-time
+docker compose logs -f
+
+# View specific service logs
+docker compose logs postgres
+docker compose logs insforge
+docker compose logs deno
+
+# Last 100 lines
+docker compose logs --tail=100 insforge
+```
+
+### Service Management
+
+```bash
+# Restart service
+docker compose restart insforge
+
+# Rebuild and restart service
+docker compose up -d --build insforge
+
+# Check service health
+docker compose ps
+
+# View resource usage
+docker stats
+```
+
+### Database Operations
+
+```bash
+# Access PostgreSQL CLI
+docker compose exec postgres psql -U postgres -d insforge
+
+# Backup database
+docker compose exec postgres pg_dump -U postgres insforge > backup.sql
+
+# Restore database
+cat backup.sql | docker compose exec -T postgres psql -U postgres -d insforge
+
+# Run migrations manually
+docker compose exec insforge npm run migrate:up --prefix backend
+```
+
+## Production Deployment
+
+### Reverse Proxy Setup
+
+Use nginx or Caddy for TLS termination and load balancing.
+
+**nginx Configuration:**
+
+```nginx:/etc/nginx/sites-available/insforge
+upstream insforge_backend {
+    server 127.0.0.1:7130;
+}
+
+upstream insforge_frontend {
+    server 127.0.0.1:7131;
+}
+
+upstream insforge_auth {
+    server 127.0.0.1:7132;
+}
+
+server {
+    listen 80;
+    server_name api.yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+
+    # Backend API
+    location /api {
+        proxy_pass http://insforge_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend Dashboard
+    location / {
+        proxy_pass http://insforge_frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name auth.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://insforge_auth;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+**Caddy Configuration (Simpler):**
+
+```caddyfile:Caddyfile
+api.yourdomain.com {
+    reverse_proxy localhost:7130
+}
+
+app.yourdomain.com {
+    reverse_proxy localhost:7131
+}
+
+auth.yourdomain.com {
+    reverse_proxy localhost:7132
+}
+```
+
+### SSL Certificates
+
+**Using Let's Encrypt:**
+
+```bash
+# Install certbot
+sudo apt-get install certbot python3-certbot-nginx
+
+# Obtain certificate
+sudo certbot --nginx -d api.yourdomain.com -d app.yourdomain.com
+
+# Auto-renewal (cron job)
+sudo certbot renew --dry-run
+```
+
+### Firewall Configuration
+
+```bash
+# Allow HTTP/HTTPS
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# Block direct access to services
+sudo ufw deny 5432/tcp  # PostgreSQL
+sudo ufw deny 7130/tcp  # Backend
+sudo ufw deny 7131/tcp  # Frontend
+sudo ufw deny 7132/tcp  # Auth
+
+# Enable firewall
+sudo ufw enable
+```
+
+<Warning>
+**Never expose PostgreSQL (port 5432) to the internet.** Always access via PostgREST API or backend with proper authentication.
+</Warning>
+
+### Monitoring Setup
+
+**Docker Health Checks:**
+
+```bash
+# Check container health
+docker compose ps
+
+# Detailed health check
+docker inspect insforge-postgres | jq '.[0].State.Health'
+```
+
+**Prometheus + Grafana (Optional):**
+
+Add to `docker-compose.prod.yml`:
+
+```yaml
+prometheus:
+  image: prom/prometheus:latest
+  volumes:
+    - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+  ports:
+    - "9090:9090"
+
+grafana:
+  image: grafana/grafana:latest
+  ports:
+    - "3000:3000"
+  environment:
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+```
+
+### Backup Strategy
+
+**Automated Daily Backups:**
+
+```bash
+#!/bin/bash
+# backup.sh
+
+BACKUP_DIR="/backups/insforge"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Backup database
+docker compose exec -T postgres pg_dump -U postgres insforge | \
+  gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
+
+# Backup storage volume
+docker run --rm -v insforge_storage-data:/data -v $BACKUP_DIR:/backup \
+  alpine tar czf /backup/storage_$DATE.tar.gz -C /data .
+
+# Keep only last 7 days
+find "$BACKUP_DIR" -name "*.gz" -mtime +7 -delete
+
+echo "Backup completed: $DATE"
+```
+
+**Schedule with cron:**
+
+```bash
+# Run daily at 2 AM
+crontab -e
+
+0 2 * * * /path/to/backup.sh >> /var/log/insforge-backup.log 2>&1
+```
+
+## Updating InsForge
+
+### Update Process
+
+```bash
+# 1. Backup first!
+./backup.sh
+
+# 2. Pull latest changes
+git pull origin main
+
+# 3. Pull new Docker images
+docker compose -f docker-compose.prod.yml pull
+
+# 4. Restart services
+docker compose -f docker-compose.prod.yml up -d
+
+# 5. Run migrations (if any)
+docker compose exec insforge npm run migrate:up --prefix backend
+
+# 6. Verify health
+docker compose ps
+```
+
+### Version Pinning
+
+For production stability, pin specific versions in `docker-compose.prod.yml`:
+
+```yaml
+services:
+  insforge:
+    image: ghcr.io/insforge/insforge:v2.0.1  # Pin version
+  
+  postgres:
+    image: ghcr.io/insforge/postgres:v15.13.2  # Pin version
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Port Already in Use**
+
+```bash
+# Find process using port
+sudo lsof -i :7130
+
+# Kill process
+sudo kill -9 <PID>
+
+# Or change port in .env
+PORT=8080
+```
+
+**2. Database Connection Failed**
+
+```bash
+# Check PostgreSQL is running
+docker compose ps postgres
+
+# View PostgreSQL logs
+docker compose logs postgres
+
+# Test connection
+docker compose exec postgres pg_isready -U postgres
+```
+
+**3. Permission Denied Errors**
+
+```bash
+# Fix Docker volume permissions
+sudo chown -R 1000:1000 /var/lib/docker/volumes/insforge_*
+
+# Or run with sudo (not recommended)
+sudo docker compose up -d
+```
+
+**4. Migration Failures**
+
+```bash
+# Check migration status
+docker compose exec insforge npm run migrate:status --prefix backend
+
+# Force re-run migrations
+docker compose exec insforge npm run migrate:force --prefix backend
+
+# Manual migration
+docker compose exec postgres psql -U postgres -d insforge -f /path/to/migration.sql
+```
+
+### Performance Optimization
+
+**PostgreSQL Tuning:**
+
+Edit `deploy/docker-init/db/postgresql.conf`:
+
+```conf
+# Increase shared memory
+shared_buffers = 256MB
+
+# Increase work memory
+work_mem = 16MB
+
+# Increase cache size
+effective_cache_size = 1GB
+
+# More connections
+max_connections = 200
+```
+
+**Node.js Memory:**
+
+```yaml:docker-compose.prod.yml
+insforge:
+  environment:
+    - NODE_OPTIONS=--max-old-space-size=4096
+```
+
+## One-Click Deployment
+
+### Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/deploy?referralCode=insforge)
+
+1. Click button above
+2. Connect GitHub account
+3. Configure environment variables
+4. Deploy automatically
+
+### Zeabur
+
+[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/Q82M3Y)
+
+1. Click button above
+2. Select region
+3. Configure settings
+4. Deploy in minutes
+
+### Sealos
+
+[![Deploy on Sealos](https://sealos.io/Deploy-on-Sealos.svg)](https://sealos.io/products/app-store/insforge)
+
+1. Click button above
+2. Create Sealos account
+3. One-click install
+4. Access via provided URL
+
+## Getting Help
+
+### Community Support
+
+- **Discord:** [discord.com/invite/MPxwj5xVvW](https://discord.com/invite/MPxwj5xVvW)
+- **GitHub Issues:** [github.com/insforge/insforge/issues](https://github.com/insforge/insforge/issues)
+- **Discussions:** [github.com/insforge/insforge/discussions](https://github.com/insforge/insforge/discussions)
+
+### Professional Services
+
+- **Email:** info@insforge.dev
+- **Custom Deployment:** Enterprise setup and migration assistance
+- **Training:** Team training and onboarding
+- **Support Contracts:** SLA-backed support for self-hosted deployments
+
+## Next Steps
+
+Now that InsForge is running:
+
+1. [Configure authentication](/authentication/overview)
+2. [Set up your database schema](/database/schema)
+3. [Create storage buckets](/storage/buckets)
+4. [Deploy serverless functions](/functions/deployment)
+5. [Connect your frontend application](/sdk/getting-started)

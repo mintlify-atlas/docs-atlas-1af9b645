@@ -1,0 +1,307 @@
+---
+title: Changelog
+description: Track new features, improvements, and fixes in InsForge
+---
+
+Stay up-to-date with the latest features, improvements, and bug fixes in InsForge.
+
+<Note>
+  For the most detailed changelog with commit-level history, see the [GitHub Changelog](https://github.com/InsForge/insforge/blob/main/CHANGELOG.md).
+</Note>
+
+---
+
+## Version 2.0.1
+**Released:** March 9, 2026
+
+<Card title="View Release" icon="github" href="https://github.com/InsForge/insforge/releases/tag/v2.0.1">
+  See the full release notes on GitHub
+</Card>
+
+---
+
+## Version 2.0.0
+**Released:** March 6, 2026
+
+### Breaking Changes
+Major version release with significant improvements and architectural changes.
+
+### Bug Fixes
+- Fixed linking unnecessary contents in documentation
+
+---
+
+## Version 1.5.8
+**Released:** February 27, 2026
+
+### AI & Administration Features
+
+**AI Model Management:**
+- Allow disabling AI models with usage history
+- Soft-disable configurations with `is_active` flag
+- Improved model configuration UI
+
+**Bug Fixes:**
+- Allow admin refresh token without admin record
+- Fixed ANSI escape code handling in Deno check output
+- Improved error handling for missing files
+- Fixed S3 credential mixing in storage provider
+- Various ESLint rule compliance fixes
+
+**Storage:**
+- Added S3-compatible storage provider support (Wasabi, MinIO, etc.)
+- Prevent mixing S3 and AWS credentials
+
+**Edge Functions:**
+- Added Deno check pre-validation for edge functions
+- Only run Deno check when Deno Subhosting is configured
+- Improved type checking and error messages
+
+---
+
+## Version 1.5.7
+**Released:** February 15, 2026
+
+### Storage Improvements
+- Removed hardcoded 50MB CSV file size check from frontend
+- Configurable file size limits
+
+---
+
+## Version 1.5.6
+**Released:** February 13, 2026
+
+Bug fixes and stability improvements.
+
+---
+
+## Version 1.5.4
+**Released:** February 7, 2026
+
+General improvements and bug fixes.
+
+---
+
+## Version 1.4.0
+**Released:** December 19, 2025
+
+Major feature release with new capabilities.
+
+---
+
+## Version 1.2.8
+**Released:** December 5, 2025
+
+Bug fixes and performance improvements.
+
+---
+
+## Version 1.2.6
+**Released:** November 22, 2025
+
+Stability improvements and bug fixes.
+
+---
+
+## Version 1.2.4
+**Released:** November 22, 2025
+
+Maintenance release.
+
+---
+
+## Version 1.2.2
+**Released:** November 18, 2025
+
+Bug fixes and improvements.
+
+---
+
+## Version 1.2.0
+**Released:** November 15, 2025
+
+Feature release with new functionality.
+
+---
+
+## Version 1.1.2
+**Released:** October 28, 2025
+
+### Features
+
+**CSV Import:**
+- Import CSV files directly into database tables
+- Bulk upsert API for efficient data import
+- CSV parsing and validation improvements
+- Frontend UI for CSV upload
+
+**Testing:**
+- Added comprehensive tests for AI configurations
+- Added tests for functions and secrets
+- Added tests for logs
+- Improved test coverage and reliability
+
+### Bug Fixes
+- macOS compatibility improvements for e2e tests
+- AI config cleanup for test environments
+- Fixed test formatting issues
+
+---
+
+## Version 1.1.0
+**Released:** October 11, 2025
+
+### Bug Fixes
+- Fixed typo in documentation
+
+---
+
+## Version 1.0.0 🎉
+**Released:** September 29, 2025
+
+**First stable release of InsForge!**
+
+This milestone release includes:
+- PostgreSQL database with PostgREST
+- Better Auth integration
+- S3-compatible storage
+- Serverless edge functions
+- AI model gateway
+- MCP (Model Context Protocol) integration
+- Comprehensive SDK and API documentation
+
+---
+
+## Version 0.3.0
+**Released:** September 26, 2025
+
+Beta release with major features before 1.0.
+
+---
+
+## Recent Feature Highlights
+
+Here are some of the most impactful features released recently:
+
+### Real-time Module
+**Released:** December 2025
+
+Built on WebSockets with pub/sub architecture:
+- Channel patterns with wildcard support
+- Message history for state syncing
+- RLS-based permissions
+- Webhook integrations
+
+Perfect for chat apps, multiplayer games, and collaborative tools.
+
+<Card title="Real-time SDK" icon="bolt" href="/features/realtime">
+  Learn about real-time subscriptions
+</Card>
+
+### Multi-Region Deployments
+**Released:** December 2025
+
+Deploy your project to the region closest to your users:
+- **us-east** - United States East Coast
+- **us-west** - United States West Coast
+- **eu-central** - Central Europe
+- **ap-southeast** - Asia Pacific Southeast
+
+<Card title="Deployment Guide" icon="globe" href="/deployment">
+  Learn about deployment options
+</Card>
+
+### Apple OAuth
+**Released:** December 2025
+
+Sign in with Apple is now available:
+- One-click enablement in dashboard
+- Shared credentials for quick testing
+- Seamless integration with other OAuth providers
+
+<Card title="Authentication" icon="lock" href="/features/authentication">
+  Learn about authentication options
+</Card>
+
+### Expanded AI Models
+**Released:** December 2025
+
+New models in the Model Gateway:
+- **GPT-5.2** - Enhanced reasoning and longer context
+- **DeepSeek V3** - High performance at lower cost
+- **Gemini 3 Flash** - Low latency real-time inference
+- **Grok 4.1 Fast** - Quick, lightweight inference
+
+<Card title="AI Integration" icon="sparkles" href="/features/ai-integration">
+  Learn about AI capabilities
+</Card>
+
+### Auth Components
+**Released:** November 2025
+
+Pre-built UI components for authentication:
+- React components for Vite apps
+- React Router components for multi-page apps
+- Next.js components for SSR apps
+- Social sign-on support built-in
+
+<Card title="UI Components" icon="palette" href="/integration/ui-components">
+  Learn about pre-built components
+</Card>
+
+### InsForge.js SDK
+**Released:** October 2025
+
+Official JavaScript/TypeScript SDK:
+- Type-safe API interactions
+- Database query builder
+- Authentication methods
+- Storage operations
+- AI integration
+
+<Card title="TypeScript SDK" icon="code" href="/sdks/typescript">
+  Learn about the SDK
+</Card>
+
+### CSV Import
+**Released:** October 2025
+
+Import data directly into your tables:
+- Upload CSV files from the dashboard
+- Automatic column mapping
+- Validation and error handling
+- Bulk insert operations
+
+Perfect for migrating data or adding sample datasets.
+
+---
+
+## Stay Updated
+
+<CardGroup cols={2}>
+  <Card title="GitHub Releases" icon="github" href="https://github.com/InsForge/insforge/releases">
+    Subscribe to release notifications
+  </Card>
+
+  <Card title="Twitter/X" icon="x-twitter" href="https://x.com/InsForge_dev">
+    Follow for feature announcements
+  </Card>
+
+  <Card title="Discord" icon="discord" href="https://discord.com/invite/MPxwj5xVvW">
+    Discuss new features with the community
+  </Card>
+
+  <Card title="LinkedIn" icon="linkedin" href="https://linkedin.com/company/insforge">
+    Get product updates and insights
+  </Card>
+</CardGroup>
+
+---
+
+## Version History
+
+For a complete commit-level changelog with all bug fixes and improvements:
+
+<Card title="View Complete Changelog" icon="clock" href="https://github.com/InsForge/insforge/blob/main/CHANGELOG.md">
+  See the full version history on GitHub
+</Card>

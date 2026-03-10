@@ -1,0 +1,629 @@
+---
+title: Realtime API
+description: WebSocket-based pub/sub channels for real-time messaging and database change notifications
+---
+
+The Realtime API provides WebSocket-based pub/sub channels for real-time messaging between clients, with support for database change notifications, custom events, and webhook integrations.
+
+## Base URL
+
+All realtime management endpoints are prefixed with `/api/realtime`
+
+## WebSocket URL
+
+Connect to: `wss://your-app.region.insforge.app/realtime`
+
+---
+
+## Channel Management
+
+### List All Channels
+
+<CodeGroup>
+```bash GET /api/realtime/channels
+curl https://your-app.region.insforge.app/api/realtime/channels \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve all configured realtime channels.
+
+**Response**
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "pattern": "order:*",
+    "description": "Order updates channel",
+    "webhookUrls": ["https://example.com/webhook"],
+    "enabled": true,
+    "createdAt": "2024-01-15T10:30:00Z",
+    "updatedAt": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "pattern": "chat:*",
+    "description": "Chat room messages",
+    "webhookUrls": null,
+    "enabled": true,
+    "createdAt": "2024-01-16T11:00:00Z",
+    "updatedAt": "2024-01-16T11:00:00Z"
+  }
+]
+```
+</ResponseExample>
+
+### Create Channel
+
+<CodeGroup>
+```bash POST /api/realtime/channels
+curl -X POST https://your-app.region.insforge.app/api/realtime/channels \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pattern": "order:*",
+    "description": "Order updates channel",
+    "webhookUrls": ["https://example.com/webhook"],
+    "enabled": true
+  }'
+```
+</CodeGroup>
+
+Create a new realtime channel with pattern-based subscription matching.
+
+**Body Parameters**
+
+<ParamField body="pattern" type="string" required>
+  Channel pattern supporting wildcards (e.g., "order:*", "chat:room:*")
+</ParamField>
+<ParamField body="description" type="string">
+  Human-readable description
+</ParamField>
+<ParamField body="webhookUrls" type="array">
+  URLs to receive webhook notifications for channel messages
+</ParamField>
+<ParamField body="enabled" type="boolean" default="true">
+  Whether channel is active
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "pattern": "order:*",
+  "description": "Order updates channel",
+  "webhookUrls": ["https://example.com/webhook"],
+  "enabled": true,
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+</ResponseExample>
+
+### Get Channel by ID
+
+<CodeGroup>
+```bash GET /api/realtime/channels/{id}
+curl https://your-app.region.insforge.app/api/realtime/channels/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve specific channel details.
+
+**Path Parameters**
+
+<ParamField path="id" type="string" required>
+  Channel UUID
+</ParamField>
+
+### Update Channel
+
+<CodeGroup>
+```bash PUT /api/realtime/channels/{id}
+curl -X PUT https://your-app.region.insforge.app/api/realtime/channels/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Updated order channel description",
+    "enabled": false
+  }'
+```
+</CodeGroup>
+
+Update channel configuration.
+
+**Path Parameters**
+
+<ParamField path="id" type="string" required>
+  Channel UUID
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="pattern" type="string">
+  Updated channel pattern
+</ParamField>
+<ParamField body="description" type="string">
+  Updated description
+</ParamField>
+<ParamField body="webhookUrls" type="array">
+  Updated webhook URLs
+</ParamField>
+<ParamField body="enabled" type="boolean">
+  Updated enabled status
+</ParamField>
+
+### Delete Channel
+
+<CodeGroup>
+```bash DELETE /api/realtime/channels/{id}
+curl -X DELETE https://your-app.region.insforge.app/api/realtime/channels/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Delete channel and all associated subscriptions.
+
+**Path Parameters**
+
+<ParamField path="id" type="string" required>
+  Channel UUID
+</ParamField>
+
+---
+
+## Message History
+
+### List Messages
+
+<CodeGroup>
+```bash GET /api/realtime/messages
+curl "https://your-app.region.insforge.app/api/realtime/messages?channelId=550e8400-e29b-41d4-a716-446655440000&limit=100" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve message history with filtering.
+
+**Query Parameters**
+
+<ParamField query="channelId" type="string">
+  Filter by channel UUID
+</ParamField>
+<ParamField query="eventName" type="string">
+  Filter by event name
+</ParamField>
+<ParamField query="limit" type="integer" default="100">
+  Maximum messages to return (1-1000)
+</ParamField>
+<ParamField query="offset" type="integer" default="0">
+  Number of messages to skip
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440000",
+    "eventName": "order.created",
+    "channelId": "550e8400-e29b-41d4-a716-446655440000",
+    "channelName": "order:123",
+    "payload": {
+      "orderId": "123",
+      "status": "pending",
+      "total": 99.99
+    },
+    "senderType": "user",
+    "senderId": "770e8400-e29b-41d4-a716-446655440000",
+    "wsAudienceCount": 5,
+    "whAudienceCount": 1,
+    "whDeliveredCount": 1,
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+]
+```
+</ResponseExample>
+
+### Get Message Statistics
+
+<CodeGroup>
+```bash GET /api/realtime/messages/stats
+curl "https://your-app.region.insforge.app/api/realtime/messages/stats?since=2024-01-01T00:00:00Z" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Get aggregated message statistics.
+
+**Query Parameters**
+
+<ParamField query="channelId" type="string">
+  Filter by channel UUID
+</ParamField>
+<ParamField query="since" type="string">
+  Filter since timestamp (ISO 8601)
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "totalMessages": 1250,
+  "whDeliveryRate": 0.98,
+  "topEvents": [
+    {
+      "eventName": "order.created",
+      "count": 450
+    },
+    {
+      "eventName": "order.updated",
+      "count": 380
+    },
+    {
+      "eventName": "order.completed",
+      "count": 220
+    }
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## WebSocket Connection
+
+### Connect to WebSocket
+
+<CodeGroup>
+```javascript WebSocket Connection
+const ws = new WebSocket('wss://your-app.region.insforge.app/realtime');
+
+ws.onopen = () => {
+  console.log('Connected to realtime server');
+  
+  // Authenticate
+  ws.send(JSON.stringify({
+    type: 'auth',
+    token: 'YOUR_ACCESS_TOKEN'
+  }));
+};
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log('Received:', message);
+};
+
+ws.onerror = (error) => {
+  console.error('WebSocket error:', error);
+};
+
+ws.onclose = () => {
+  console.log('Disconnected from realtime server');
+};
+```
+</CodeGroup>
+
+### Authentication
+
+Send authentication message immediately after connection:
+
+```json
+{
+  "type": "auth",
+  "token": "YOUR_ACCESS_TOKEN"
+}
+```
+
+**Response:**
+
+```json Success
+{
+  "type": "auth_success",
+  "userId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```json Error
+{
+  "type": "error",
+  "message": "Invalid token"
+}
+```
+
+### Subscribe to Channel
+
+<CodeGroup>
+```javascript Subscribe
+ws.send(JSON.stringify({
+  type: 'subscribe',
+  channel: 'order:123'
+}));
+```
+</CodeGroup>
+
+**Message Format:**
+
+```json
+{
+  "type": "subscribe",
+  "channel": "order:123"
+}
+```
+
+**Response:**
+
+```json Success
+{
+  "type": "subscribed",
+  "channel": "order:123",
+  "subscriptionId": "abc123"
+}
+```
+
+```json Error
+{
+  "type": "error",
+  "message": "Channel not found or not accessible"
+}
+```
+
+### Unsubscribe from Channel
+
+<CodeGroup>
+```javascript Unsubscribe
+ws.send(JSON.stringify({
+  type: 'unsubscribe',
+  channel: 'order:123'
+}));
+```
+</CodeGroup>
+
+**Message Format:**
+
+```json
+{
+  "type": "unsubscribe",
+  "channel": "order:123"
+}
+```
+
+**Response:**
+
+```json
+{
+  "type": "unsubscribed",
+  "channel": "order:123"
+}
+```
+
+### Publish Message
+
+<CodeGroup>
+```javascript Publish
+ws.send(JSON.stringify({
+  type: 'publish',
+  channel: 'order:123',
+  event: 'order.updated',
+  payload: {
+    orderId: '123',
+    status: 'shipped',
+    trackingNumber: 'TRACK123'
+  }
+}));
+```
+</CodeGroup>
+
+**Message Format:**
+
+```json
+{
+  "type": "publish",
+  "channel": "order:123",
+  "event": "order.updated",
+  "payload": {
+    "orderId": "123",
+    "status": "shipped"
+  }
+}
+```
+
+**Response:**
+
+```json Success
+{
+  "type": "published",
+  "messageId": "660e8400-e29b-41d4-a716-446655440000",
+  "channel": "order:123",
+  "event": "order.updated"
+}
+```
+
+### Receive Messages
+
+Subscribed clients receive messages in this format:
+
+```json
+{
+  "type": "message",
+  "messageId": "660e8400-e29b-41d4-a716-446655440000",
+  "channel": "order:123",
+  "event": "order.updated",
+  "payload": {
+    "orderId": "123",
+    "status": "shipped",
+    "trackingNumber": "TRACK123"
+  },
+  "senderId": "770e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+## Database Change Notifications
+
+### Subscribe to Table Changes
+
+<CodeGroup>
+```javascript Subscribe to Table
+ws.send(JSON.stringify({
+  type: 'subscribe',
+  channel: 'db:posts',
+  filter: {
+    event: 'INSERT',  // INSERT, UPDATE, DELETE, or *
+    schema: 'public'
+  }
+}));
+```
+</CodeGroup>
+
+**Received Change Notification:**
+
+```json INSERT Event
+{
+  "type": "message",
+  "channel": "db:posts",
+  "event": "INSERT",
+  "payload": {
+    "schema": "public",
+    "table": "posts",
+    "commit_timestamp": "2024-01-15T10:30:00Z",
+    "eventType": "INSERT",
+    "new": {
+      "id": "248373e1-0aea-45ce-8844-5ef259203749",
+      "title": "New Post",
+      "content": "Hello world",
+      "createdAt": "2024-01-15T10:30:00Z"
+    },
+    "old": null
+  }
+}
+```
+
+```json UPDATE Event
+{
+  "type": "message",
+  "channel": "db:posts",
+  "event": "UPDATE",
+  "payload": {
+    "schema": "public",
+    "table": "posts",
+    "eventType": "UPDATE",
+    "old": {
+      "id": "248373e1-0aea-45ce-8844-5ef259203749",
+      "title": "Old Title"
+    },
+    "new": {
+      "id": "248373e1-0aea-45ce-8844-5ef259203749",
+      "title": "Updated Title"
+    }
+  }
+}
+```
+
+```json DELETE Event
+{
+  "type": "message",
+  "channel": "db:posts",
+  "event": "DELETE",
+  "payload": {
+    "schema": "public",
+    "table": "posts",
+    "eventType": "DELETE",
+    "old": {
+      "id": "248373e1-0aea-45ce-8844-5ef259203749",
+      "title": "Deleted Post"
+    },
+    "new": null
+  }
+}
+```
+
+---
+
+## Permissions
+
+### Get Realtime Permissions
+
+<CodeGroup>
+```bash GET /api/realtime/permissions
+curl https://your-app.region.insforge.app/api/realtime/permissions \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve RLS policies for subscribe and publish operations.
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "subscribe": {
+    "policies": [
+      {
+        "policyName": "allow_authenticated_subscribe",
+        "tableName": "realtime_channels",
+        "command": "SELECT",
+        "roles": ["authenticated"],
+        "using": "enabled = true",
+        "withCheck": null
+      }
+    ]
+  },
+  "publish": {
+    "policies": [
+      {
+        "policyName": "allow_authenticated_publish",
+        "tableName": "realtime_messages",
+        "command": "INSERT",
+        "roles": ["authenticated"],
+        "using": null,
+        "withCheck": "true"
+      }
+    ]
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## Webhook Integration
+
+When messages are published to channels with configured webhook URLs, InsForge sends HTTP POST requests:
+
+**Webhook Payload:**
+
+```json
+{
+  "messageId": "660e8400-e29b-41d4-a716-446655440000",
+  "channelId": "550e8400-e29b-41d4-a716-446655440000",
+  "channelName": "order:123",
+  "event": "order.updated",
+  "payload": {
+    "orderId": "123",
+    "status": "shipped"
+  },
+  "senderId": "770e8400-e29b-41d4-a716-446655440000",
+  "senderType": "user",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**Headers:**
+
+```
+Content-Type: application/json
+X-InsForge-Event: order.updated
+X-InsForge-Channel: order:123
+X-InsForge-Message-ID: 660e8400-e29b-41d4-a716-446655440000
+```

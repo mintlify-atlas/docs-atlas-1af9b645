@@ -1,0 +1,314 @@
+---
+title: 'Logs API'
+description: 'Activity logs for database operations and user authentication events'
+icon: 'file-lines'
+---
+
+<Note>
+The Logs API provides admin endpoints to retrieve and manage activity logs for your InsForge backend. Track database operations (INSERT, UPDATE, DELETE) and authentication events (LOGIN) across all tables and users.
+</Note>
+
+## List Activity Logs
+
+<api method="GET" path="/api/logs" />
+
+Retrieve paginated activity logs with optional filtering by action type or table name.
+
+### Authentication
+
+Requires:
+- **Bearer Token**: Admin JWT token in `Authorization: Bearer <token>` header
+
+### Query Parameters
+
+<ParamField query="limit" type="integer" default="100">
+  Maximum number of logs to return per page
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of logs to skip for pagination
+</ParamField>
+
+<ParamField query="action" type="string">
+  Filter by action type. Valid values:
+  - `INSERT` - Record creation events
+  - `UPDATE` - Record modification events
+  - `DELETE` - Record deletion events
+  - `LOGIN` - User authentication events
+</ParamField>
+
+<ParamField query="table" type="string">
+  Filter by table name (e.g., `posts`, `comments`). Not applicable for LOGIN actions.
+</ParamField>
+
+### Response Headers
+
+<ResponseField name="X-Total-Count" type="integer">
+  Total number of logs matching the query
+</ResponseField>
+
+<ResponseField name="X-Page" type="integer">
+  Current page number (calculated from offset and limit)
+</ResponseField>
+
+<ResponseField name="X-Page-Size" type="integer">
+  Number of items per page (same as limit parameter)
+</ResponseField>
+
+<ResponseField name="X-Total-Pages" type="integer">
+  Total number of pages available
+</ResponseField>
+
+### Response Body
+
+<ResponseField name="id" type="string">
+  Unique log entry identifier
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  When the action occurred (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="action" type="string">
+  Type of action: `INSERT`, `UPDATE`, `DELETE`, or `LOGIN`
+</ResponseField>
+
+<ResponseField name="table" type="string | null">
+  Table name affected by the action (null for LOGIN actions)
+</ResponseField>
+
+<ResponseField name="record_id" type="string | null">
+  ID of the affected record (null for LOGIN actions)
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  ID of the user who performed the action
+</ResponseField>
+
+<ResponseField name="details" type="object | null">
+  Additional context about the action (structure varies by action type)
+</ResponseField>
+
+### Example Request
+
+```bash
+# Get all logs with pagination
+curl -X GET "https://your-app.region.insforge.app/api/logs?limit=50&offset=0" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+
+# Filter by action type
+curl -X GET "https://your-app.region.insforge.app/api/logs?action=INSERT" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+
+# Filter by table name
+curl -X GET "https://your-app.region.insforge.app/api/logs?table=posts&limit=100" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### Example Response
+
+```json
+[
+  {
+    "id": "log-123",
+    "timestamp": "2024-01-21T10:30:00Z",
+    "action": "INSERT",
+    "table": "posts",
+    "record_id": "post-456",
+    "user_id": "user-789",
+    "details": {
+      "title": "New Post",
+      "author": "John Doe"
+    }
+  },
+  {
+    "id": "log-124",
+    "timestamp": "2024-01-21T10:31:00Z",
+    "action": "LOGIN",
+    "table": null,
+    "record_id": null,
+    "user_id": "user-789",
+    "details": {
+      "ip": "192.168.1.1",
+      "user_agent": "Mozilla/5.0..."
+    }
+  }
+]
+```
+
+---
+
+## Clear Logs
+
+<api method="DELETE" path="/api/logs" />
+
+Delete activity logs, optionally filtering by date. Use this endpoint to manage log storage and comply with data retention policies.
+
+### Authentication
+
+Requires:
+- **Bearer Token**: Admin JWT token in `Authorization: Bearer <token>` header
+
+### Query Parameters
+
+<ParamField query="before" type="string">
+  Delete logs before this timestamp (ISO 8601 format). If not provided, all logs will be deleted.
+  
+  Example: `2024-01-21T10:30:00Z`
+</ParamField>
+
+### Response
+
+<ResponseField name="message" type="string">
+  Success message confirming logs were cleared
+</ResponseField>
+
+<ResponseField name="deleted_count" type="integer">
+  Number of log entries deleted
+</ResponseField>
+
+### Example Request
+
+```bash
+# Delete all logs older than a specific date
+curl -X DELETE "https://your-app.region.insforge.app/api/logs?before=2024-01-20T00:00:00Z" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+
+# Delete all logs (use with caution!)
+curl -X DELETE "https://your-app.region.insforge.app/api/logs" \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### Example Response
+
+```json
+{
+  "message": "Logs cleared successfully",
+  "deleted_count": 150
+}
+```
+
+### Error Responses
+
+**400 Bad Request** - Invalid date format:
+
+```json
+{
+  "error": "INVALID_DATE",
+  "message": "Invalid date format for 'before' parameter",
+  "statusCode": 400,
+  "nextAction": "Use ISO 8601 date format (YYYY-MM-DDTHH:mm:ssZ)"
+}
+```
+
+---
+
+## Get Logs Statistics
+
+<api method="GET" path="/api/logs/stats" />
+
+Retrieve aggregated statistics about activity logs including action counts, table activity, and recent activity metrics.
+
+### Authentication
+
+Requires:
+- **Bearer Token**: Admin JWT token in `Authorization: Bearer <token>` header
+
+### Response
+
+<ResponseField name="actionStats" type="array">
+  Breakdown of logs by action type
+  
+  <ResponseField name="actionStats[].action" type="string">
+    Action type: `INSERT`, `UPDATE`, `DELETE`, or `LOGIN`
+  </ResponseField>
+  
+  <ResponseField name="actionStats[].count" type="integer">
+    Number of logs for this action type
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="tableStats" type="array">
+  Breakdown of logs by table name
+  
+  <ResponseField name="tableStats[].table_name" type="string">
+    Table name
+  </ResponseField>
+  
+  <ResponseField name="tableStats[].count" type="integer">
+    Number of logs for this table
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="recentActivity" type="integer">
+  Count of logs created in the last 24 hours
+</ResponseField>
+
+<ResponseField name="totalLogs" type="integer">
+  Total number of logs in the system
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET https://your-app.region.insforge.app/api/logs/stats \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### Example Response
+
+```json
+{
+  "actionStats": [
+    {
+      "action": "INSERT",
+      "count": 245
+    },
+    {
+      "action": "UPDATE",
+      "count": 189
+    },
+    {
+      "action": "DELETE",
+      "count": 34
+    },
+    {
+      "action": "LOGIN",
+      "count": 567
+    }
+  ],
+  "tableStats": [
+    {
+      "table_name": "posts",
+      "count": 156
+    },
+    {
+      "table_name": "comments",
+      "count": 223
+    }
+  ],
+  "recentActivity": 47,
+  "totalLogs": 1035
+}
+```
+
+---
+
+## When to Use Logs APIs
+
+<Note>
+Use these endpoints to:
+- **Audit database changes**: Track all INSERT, UPDATE, and DELETE operations
+- **Monitor user activity**: Review authentication events and user actions
+- **Debug issues**: Investigate what changed and when in your database
+- **Compliance**: Maintain audit trails for regulatory requirements
+- **Analytics**: Analyze usage patterns and activity trends
+</Note>
+
+### Common Use Cases
+
+1. **Admin Dashboard**: Display recent activity and statistics using `/api/logs/stats`
+2. **Audit Trail**: Use `/api/logs` with filters to track specific tables or users
+3. **Security Monitoring**: Filter by `action=LOGIN` to review authentication events
+4. **Data Retention**: Use `/api/logs` DELETE endpoint to comply with retention policies
+5. **Debugging**: Filter by table and date range to investigate data issues

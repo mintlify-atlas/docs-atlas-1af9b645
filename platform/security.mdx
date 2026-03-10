@@ -1,0 +1,474 @@
+---
+title: 'Security'
+description: 'Authentication, authorization, and security best practices for InsForge'
+---
+
+## Authentication Methods
+
+InsForge supports three authentication methods:
+
+### 1. JWT Tokens (User Authentication)
+
+JSON Web Tokens for user sessions with 24-hour expiration.
+
+**Token Structure:**
+```typescript
+{
+  sub: string,      // User ID
+  email: string,    // User email
+  role: 'authenticated' | 'project_admin',
+  iat: number,      // Issued at timestamp
+  exp: number       // Expiration timestamp
+}
+```
+
+**Token Generation:**
+```typescript:backend/src/infra/security/token.manager.ts
+const accessToken = tokenManager.generateAccessToken({
+  sub: userId,
+  email: user.email,
+  role: 'authenticated'
+});
+```
+
+**Usage:**
+```bash
+curl -H "Authorization: Bearer <jwt_token>" \
+  https://your-app.insforge.app/api/resource
+```
+
+### 2. API Keys (Service Authentication)
+
+Long-lived credentials for server-to-server communication.
+
+**Format:** `ik_<random_string>` (minimum 32 characters)
+
+**Storage:**
+- Hashed with bcrypt (cost factor: 10)
+- Stored in `auth.secrets` table
+- Never logged or exposed in responses
+
+**Usage:**
+```bash
+# Method 1: Bearer token (recommended)
+curl -H "Authorization: Bearer ik_your_api_key" \
+  https://your-app.insforge.app/api/resource
+
+# Method 2: x-api-key header (legacy)
+curl -H "x-api-key: ik_your_api_key" \
+  https://your-app.insforge.app/api/resource
+```
+
+<Warning>
+**API Key Security:**
+- Never commit API keys to version control
+- Rotate keys regularly (every 90 days recommended)
+- Use different keys for different environments
+- Revoke compromised keys immediately via dashboard
+</Warning>
+
+### 3. OAuth 2.0 (Social Login)
+
+Supported providers:
+- Google
+- GitHub
+- Discord
+- Microsoft
+- LinkedIn
+- X (Twitter)
+- Apple
+- Facebook
+
+**OAuth Flow:**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant InsForge
+    participant Provider
+    
+    User->>App: Click "Login with Google"
+    App->>InsForge: GET /auth/oauth/google
+    InsForge->>Provider: Redirect to consent screen
+    User->>Provider: Grant permission
+    Provider->>InsForge: Callback with code
+    InsForge->>Provider: Exchange code for token
+    Provider->>InsForge: Return user info
+    InsForge->>InsForge: Create/find user
+    InsForge->>App: Redirect with JWT
+    App->>User: Logged in
+```
+
+**Configuration:**
+```bash:.env
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-secret
+```
+
+## Authorization System
+
+### Role-Based Access Control (RBAC)
+
+Three built-in roles:
+
+| Role | Description | Use Case |
+|------|-------------|----------|
+| `anon` | Unauthenticated users | Public read access |
+| `authenticated` | Logged-in users | Standard user operations |
+| `project_admin` | System administrators | Full access to all resources |
+
+**Middleware Implementation:**
+
+```typescript:backend/src/api/middlewares/auth.ts
+// Verify user (authenticated or admin)
+export async function verifyUser(
+  req: AuthRequest, 
+  res: Response, 
+  next: NextFunction
+) {
+  const apiKey = extractApiKey(req);
+  if (apiKey) {
+    return verifyApiKey(req, res, next);
+  }
+  return verifyToken(req, res, next);
+}
+
+// Verify admin only
+export async function verifyAdmin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const payload = tokenManager.verifyToken(token);
+  if (payload.role !== 'project_admin') {
+    throw new AppError('Admin access required', 403);
+  }
+  next();
+}
+```
+
+### Row Level Security (RLS)
+
+PostgreSQL RLS policies enforce data-level access control.
+
+**How RLS Works:**
+
+1. **PostgREST** sets `request.jwt.claim.role` based on JWT
+2. **PostgreSQL** applies policies based on current role
+3. **Users** only see data they're authorized to access
+
+**Auto-Generated Policy:**
+
+```sql:deploy/docker-init/db/db-init.sql
+-- Automatically created for tables with RLS enabled
+CREATE POLICY "project_admin_policy" 
+  ON your_table
+  FOR ALL 
+  TO project_admin 
+  USING (true) 
+  WITH CHECK (true);
+```
+
+**Custom User Policies:**
+
+```sql
+-- Example: Users can only read/update their own data
+CREATE POLICY "user_select_own" 
+  ON users
+  FOR SELECT
+  TO authenticated
+  USING (auth.uid() = id);
+
+CREATE POLICY "user_update_own"
+  ON users
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Example: Public read access
+CREATE POLICY "public_read"
+  ON posts
+  FOR SELECT
+  TO anon, authenticated
+  USING (published = true);
+```
+
+**Helper Function:**
+
+```sql
+-- Get current authenticated user ID
+CREATE FUNCTION auth.uid() RETURNS UUID AS $$
+  SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
+$$ LANGUAGE SQL STABLE;
+```
+
+<Warning>
+**Always enable RLS on tables containing user data:**
+```sql
+ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;
+```
+Without RLS policies, tables default to deny all access for `anon` and `authenticated` roles.
+</Warning>
+
+## Encryption
+
+### Database Encryption
+
+**Application-Level Encryption:**
+
+Using PostgreSQL's `pgcrypto` extension:
+
+```sql
+-- Encrypt sensitive data
+INSERT INTO secrets (key, value)
+VALUES (
+  'api_key',
+  pgp_sym_encrypt('secret_value', current_setting('app.encryption_key'))
+);
+
+-- Decrypt data
+SELECT 
+  key,
+  pgp_sym_decrypt(value::bytea, current_setting('app.encryption_key')) as decrypted_value
+FROM secrets;
+```
+
+**Configuration:**
+
+```yaml:docker-compose.yml
+postgres:
+  command: postgres -c config_file=/etc/postgresql/postgresql.conf 
+           -c app.encryption_key='${ENCRYPTION_KEY:-${JWT_SECRET}}'
+```
+
+```bash:.env
+# Primary encryption key (falls back to JWT_SECRET)
+ENCRYPTION_KEY=your-32-char-or-longer-encryption-key
+```
+
+### Password Hashing
+
+**Algorithm:** bcrypt with cost factor 10
+
+```typescript:backend/src/services/auth/auth.service.ts
+import bcrypt from 'bcryptjs';
+
+// Registration
+const hashedPassword = await bcrypt.hash(password, 10);
+
+// Login validation
+const validPassword = await bcrypt.compare(password, dbUser.password);
+```
+
+**Password Requirements:**
+
+Configurable via `auth.auth_config` table:
+- Minimum length (default: 8 characters)
+- Require uppercase letters
+- Require lowercase letters
+- Require numbers
+- Require special characters
+
+### API Key Hashing
+
+**Storage Implementation:**
+
+```typescript:backend/src/services/secrets/secret.service.ts
+// Generate and store API key
+async createApiKey(): Promise<string> {
+  const apiKey = `ik_${crypto.randomBytes(32).toString('hex')}`;
+  const hashedKey = await bcrypt.hash(apiKey, 10);
+  
+  await pool.query(
+    'INSERT INTO auth.secrets (key, value) VALUES ($1, $2)',
+    ['project_api_key', hashedKey]
+  );
+  
+  return apiKey; // Return only once, never stored plain
+}
+
+// Verify API key
+async verifyApiKey(apiKey: string): Promise<boolean> {
+  const result = await pool.query(
+    'SELECT value FROM auth.secrets WHERE key = $1',
+    ['project_api_key']
+  );
+  
+  if (!result.rows[0]) return false;
+  
+  return bcrypt.compare(apiKey, result.rows[0].value);
+}
+```
+
+## Security Best Practices
+
+### Environment Variables
+
+<Warning>
+**Critical Security Settings:**
+
+```bash:.env
+# REQUIRED: Change these in production
+JWT_SECRET=your-secret-key-min-32-chars-recommended-64
+ENCRYPTION_KEY=different-key-from-jwt-secret-32-chars-min
+ADMIN_PASSWORD=strong-unique-password-change-immediately
+POSTGRES_PASSWORD=secure-database-password
+
+# Generate secure secrets:
+openssl rand -base64 48  # For JWT_SECRET
+openssl rand -hex 32     # For ENCRYPTION_KEY
+```
+</Warning>
+
+### Network Security
+
+**Production Checklist:**
+
+- [ ] **Never expose PostgreSQL port (5432) publicly**
+- [ ] Use reverse proxy (nginx, Caddy) for TLS termination
+- [ ] Enable HTTPS only (redirect HTTP to HTTPS)
+- [ ] Set up CORS properly:
+  ```typescript
+  app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(','),
+    credentials: true
+  }));
+  ```
+- [ ] Implement rate limiting:
+  ```typescript
+  import rateLimit from 'express-rate-limit';
+  
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+  });
+  
+  app.use('/api/', limiter);
+  ```
+
+### Database Security
+
+**Connection Security:**
+
+```bash:.env
+# Production: Use SSL connections
+DATABASE_URL=postgresql://user:pass@host:5432/db?sslmode=require
+```
+
+**Audit Logging:**
+
+Enable PostgreSQL audit logs:
+
+```sql
+-- Track all admin actions
+CREATE TABLE auth.audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  action TEXT,
+  table_name TEXT,
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Trigger function
+CREATE FUNCTION log_changes() RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO auth.audit_logs (user_id, action, table_name)
+  VALUES (auth.uid(), TG_OP, TG_TABLE_NAME);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Token Security
+
+**JWT Best Practices:**
+
+1. **Short expiration:** 24 hours (configurable)
+2. **Refresh tokens:** Not implemented yet (coming soon)
+3. **Token storage:** 
+   - Frontend: Use `httpOnly` cookies (not localStorage)
+   - Mobile: Secure keychain/keystore
+4. **Token revocation:** Clear server-side sessions on logout
+
+### Secure File Upload
+
+**Upload Validation:**
+
+```typescript:backend/src/services/storage/storage.service.ts
+const MAX_FILE_SIZE = process.env.MAX_FILE_SIZE || 52428800; // 50MB
+
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf'
+];
+
+function validateFile(file: File): void {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('File too large');
+  }
+  
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    throw new Error('Invalid file type');
+  }
+}
+```
+
+## Compliance
+
+### GDPR Considerations
+
+**User Data Rights:**
+
+1. **Right to access:** Provide user data export API
+2. **Right to deletion:** Cascade delete user records
+3. **Right to portability:** JSON export format
+4. **Privacy by design:** RLS policies enforce data isolation
+
+**Implementation:**
+
+```typescript
+// Export user data
+GET /auth/user/export
+
+// Delete user account
+DELETE /auth/user/:id
+```
+
+### Data Retention
+
+```sql
+-- Auto-delete old audit logs (90 days)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+SELECT cron.schedule(
+  'delete-old-audit-logs',
+  '0 0 * * *', -- Daily at midnight
+  $$DELETE FROM auth.audit_logs WHERE timestamp < NOW() - INTERVAL '90 days'$$
+);
+```
+
+## Vulnerability Reporting
+
+If you discover a security vulnerability:
+
+1. **Do not** open a public GitHub issue
+2. Email: security@insforge.dev
+3. Include detailed reproduction steps
+4. Expected response time: 48 hours
+
+## Security Updates
+
+Follow security updates:
+
+- GitHub Security Advisories: [github.com/insforge/insforge/security](https://github.com/insforge/insforge/security)
+- Discord announcements: [discord.com/invite/MPxwj5xVvW](https://discord.com/invite/MPxwj5xVvW)
+- Release notes: [CHANGELOG.md](https://github.com/insforge/insforge/blob/main/CHANGELOG.md)

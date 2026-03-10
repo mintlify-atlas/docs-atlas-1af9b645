@@ -1,0 +1,468 @@
+---
+title: Functions API
+description: Serverless functions running in Deno runtime with full CRUD management
+---
+
+The Functions API enables deployment and execution of serverless functions written in JavaScript/TypeScript, running in a secure Deno runtime environment.
+
+## Base URL
+
+- Admin endpoints: `/api/functions`
+- Execution endpoint: `/functions`
+
+---
+
+## Function Management
+
+### List All Functions
+
+<CodeGroup>
+```bash GET /api/functions
+curl https://your-app.region.insforge.app/api/functions \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve all functions with metadata (admin only).
+
+**Response**
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "slug": "hello-world",
+    "name": "Hello World Function",
+    "description": "Returns a greeting message",
+    "status": "active",
+    "created_at": "2024-01-21T10:30:00Z",
+    "updated_at": "2024-01-21T10:35:00Z",
+    "deployed_at": "2024-01-21T10:35:00Z"
+  },
+  {
+    "id": "223e4567-e89b-12d3-a456-426614174001",
+    "slug": "process-webhook",
+    "name": "Webhook Processor",
+    "description": "Processes incoming webhooks",
+    "status": "draft",
+    "created_at": "2024-01-22T14:20:00Z",
+    "updated_at": "2024-01-22T14:20:00Z",
+    "deployed_at": null
+  }
+]
+```
+</ResponseExample>
+
+### Create Function
+
+<CodeGroup>
+```bash POST /api/functions
+curl -X POST https://your-app.region.insforge.app/api/functions \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Hello World Function",
+    "slug": "hello-world",
+    "description": "Returns a personalized greeting",
+    "status": "active",
+    "code": "export default async function(request) {\n  const { name = '"'"'World'"'"' } = await request.json();\n  return new Response(\n    JSON.stringify({ message: `Hello, ${name}!` }),\n    { headers: { '"'"'Content-Type'"'"': '"'"'application/json'"'"' } }\n  );\n}"
+  }'
+```
+</CodeGroup>
+
+Create a new serverless function (admin only).
+
+**Body Parameters**
+
+<ParamField body="name" type="string" required>
+  Display name for the function
+</ParamField>
+<ParamField body="slug" type="string">
+  URL-friendly identifier (auto-generated from name if not provided)
+</ParamField>
+<ParamField body="code" type="string" required>
+  JavaScript/TypeScript code exporting async function
+</ParamField>
+<ParamField body="description" type="string">
+  Description of what the function does
+</ParamField>
+<ParamField body="status" type="string" default="active">
+  Initial status: `draft` or `active`
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "function": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "slug": "hello-world",
+    "name": "Hello World Function",
+    "description": "Returns a personalized greeting",
+    "status": "active",
+    "created_at": "2024-01-21T10:30:00Z",
+    "updated_at": "2024-01-21T10:30:00Z",
+    "deployed_at": "2024-01-21T10:30:00Z"
+  }
+}
+```
+</ResponseExample>
+
+**Example Function Code**
+
+```javascript Simple Hello World
+export default async function(request) {
+  const { name = 'World' } = await request.json();
+  return new Response(
+    JSON.stringify({ message: `Hello, ${name}!` }),
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+```javascript Database Query
+export default async function(request) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_KEY');
+  
+  const response = await fetch(`${supabaseUrl}/rest/v1/posts?select=*`, {
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    }
+  });
+  
+  const posts = await response.json();
+  return new Response(JSON.stringify(posts), {
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+```
+
+### Get Function Details
+
+<CodeGroup>
+```bash GET /api/functions/{slug}
+curl https://your-app.region.insforge.app/api/functions/hello-world \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve function details including code (admin only).
+
+**Path Parameters**
+
+<ParamField path="slug" type="string" required>
+  Function slug identifier
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "slug": "hello-world",
+  "name": "Hello World Function",
+  "description": "Returns a greeting message",
+  "code": "export default async function(request) {\n  const { name = 'World' } = await request.json();\n  return new Response(\n    JSON.stringify({ message: `Hello, ${name}!` }),\n    { headers: { 'Content-Type': 'application/json' } }\n  );\n}",
+  "status": "active",
+  "created_at": "2024-01-21T10:30:00Z",
+  "updated_at": "2024-01-21T10:35:00Z",
+  "deployed_at": "2024-01-21T10:35:00Z"
+}
+```
+</ResponseExample>
+
+### Update Function
+
+<CodeGroup>
+```bash PUT /api/functions/{slug}
+curl -X PUT https://your-app.region.insforge.app/api/functions/hello-world \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Hello World Function v2",
+    "description": "Updated greeting function",
+    "code": "export default async function(request) {\n  return new Response('"'"'Hello!'"'"');\n}"
+  }'
+```
+</CodeGroup>
+
+Update function code or metadata (admin only).
+
+**Path Parameters**
+
+<ParamField path="slug" type="string" required>
+  Function slug identifier
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="name" type="string">
+  New display name
+</ParamField>
+<ParamField body="code" type="string">
+  Updated function code
+</ParamField>
+<ParamField body="description" type="string">
+  Updated description
+</ParamField>
+<ParamField body="status" type="string">
+  Function status: `draft`, `active`, or `error`
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "function": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "slug": "hello-world",
+    "name": "Hello World Function v2",
+    "description": "Updated greeting function",
+    "status": "active",
+    "updated_at": "2024-01-21T11:00:00Z",
+    "deployed_at": "2024-01-21T11:00:00Z"
+  }
+}
+```
+</ResponseExample>
+
+### Delete Function
+
+<CodeGroup>
+```bash DELETE /api/functions/{slug}
+curl -X DELETE https://your-app.region.insforge.app/api/functions/hello-world \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Permanently delete a function (admin only).
+
+**Path Parameters**
+
+<ParamField path="slug" type="string" required>
+  Function slug identifier
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "message": "Function hello-world deleted successfully"
+}
+```
+</ResponseExample>
+
+---
+
+## Function Execution
+
+### Execute Function (GET)
+
+<CodeGroup>
+```bash GET /functions/{slug}
+curl https://your-app.region.insforge.app/functions/hello-world
+```
+</CodeGroup>
+
+Execute function using GET method.
+
+**Path Parameters**
+
+<ParamField path="slug" type="string" required>
+  Function slug identifier
+</ParamField>
+
+**Response**
+
+The response depends on what your function returns. The function controls the status code, headers, and body.
+
+<ResponseExample>
+```json Example Response
+{
+  "message": "Hello, World!"
+}
+```
+</ResponseExample>
+
+### Execute Function (POST)
+
+<CodeGroup>
+```bash POST /functions/{slug}
+curl -X POST https://your-app.region.insforge.app/functions/hello-world \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John",
+    "age": 30
+  }'
+```
+</CodeGroup>
+
+Execute function with JSON body using POST method.
+
+**Path Parameters**
+
+<ParamField path="slug" type="string" required>
+  Function slug identifier
+</ParamField>
+
+**Body**
+
+Any JSON data your function expects.
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Hello, John!"
+}
+```
+</ResponseExample>
+
+### Execute Function (PUT)
+
+<CodeGroup>
+```bash PUT /functions/{slug}
+curl -X PUT https://your-app.region.insforge.app/functions/update-record \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "123",
+    "status": "completed"
+  }'
+```
+</CodeGroup>
+
+Execute function using PUT method.
+
+### Execute Function (PATCH)
+
+<CodeGroup>
+```bash PATCH /functions/{slug}
+curl -X PATCH https://your-app.region.insforge.app/functions/partial-update \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "active"
+  }'
+```
+</CodeGroup>
+
+Execute function using PATCH method.
+
+### Execute Function (DELETE)
+
+<CodeGroup>
+```bash DELETE /functions/{slug}
+curl -X DELETE https://your-app.region.insforge.app/functions/delete-resource?id=123
+```
+</CodeGroup>
+
+Execute function using DELETE method.
+
+---
+
+## Function Environment
+
+### Available APIs
+
+Functions run in a Deno runtime with access to:
+
+- **Web APIs**: `fetch`, `Request`, `Response`, `URL`, etc.
+- **Deno APIs**: `Deno.env.get()`, file system (restricted)
+- **Standard library**: Built-in JavaScript/TypeScript features
+
+### Environment Variables
+
+Access environment variables using `Deno.env.get()`:
+
+```javascript
+const apiKey = Deno.env.get('API_KEY');
+const dbUrl = Deno.env.get('DATABASE_URL');
+```
+
+### Request Object
+
+The `request` parameter provides:
+
+```javascript
+export default async function(request) {
+  // HTTP method
+  const method = request.method; // GET, POST, etc.
+  
+  // Headers
+  const contentType = request.headers.get('Content-Type');
+  const auth = request.headers.get('Authorization');
+  
+  // URL and query params
+  const url = new URL(request.url);
+  const id = url.searchParams.get('id');
+  
+  // Body (for POST/PUT/PATCH)
+  const body = await request.json();
+  // OR
+  const text = await request.text();
+  
+  // Return response
+  return new Response(
+    JSON.stringify({ success: true }),
+    { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+}
+```
+
+### Error Handling
+
+```javascript
+export default async function(request) {
+  try {
+    const data = await request.json();
+    
+    if (!data.name) {
+      return new Response(
+        JSON.stringify({ error: 'Name is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Process data...
+    return new Response(
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+    
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+```
+
+### Security Restrictions
+
+Functions cannot use:
+- `Deno.run()` - Process execution blocked
+- Unrestricted file system access
+- Network access to internal services
+
+---
+
+## Status Codes
+
+- `200` - Function executed successfully
+- `404` - Function not found or not active
+- `502` - Failed to proxy to Deno runtime
+- `500` - Function threw an error

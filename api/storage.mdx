@@ -1,0 +1,532 @@
+---
+title: Storage API
+description: S3-compatible object storage with bucket management, file uploads, and presigned URLs
+---
+
+The Storage API provides bucket-based file storage with support for both local and S3 backends, including presigned URLs for direct uploads/downloads.
+
+## Base URL
+
+All storage endpoints are prefixed with `/api/storage`
+
+---
+
+## Bucket Management
+
+### List All Buckets
+
+<CodeGroup>
+```bash GET /api/storage/buckets
+curl https://your-app.region.insforge.app/api/storage/buckets \
+  -H "x-api-key: YOUR_API_KEY"
+```
+</CodeGroup>
+
+Retrieve list of all bucket names (admin only).
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "buckets": ["avatars", "documents", "uploads", "public", "private"]
+}
+```
+</ResponseExample>
+
+### Create Bucket
+
+<CodeGroup>
+```bash POST /api/storage/buckets
+curl -X POST https://your-app.region.insforge.app/api/storage/buckets \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bucketName": "avatars",
+    "isPublic": true
+  }'
+```
+</CodeGroup>
+
+Create a new storage bucket (admin only).
+
+**Body Parameters**
+
+<ParamField body="bucketName" type="string" required>
+  Bucket name (alphanumeric, underscore, and hyphen only)
+</ParamField>
+<ParamField body="isPublic" type="boolean" default="true">
+  Whether bucket is publicly accessible
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Bucket created successfully",
+  "bucket": "avatars"
+}
+```
+</ResponseExample>
+
+### Update Bucket Visibility
+
+<CodeGroup>
+```bash PATCH /api/storage/buckets/{bucketName}
+curl -X PATCH https://your-app.region.insforge.app/api/storage/buckets/avatars \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "isPublic": false
+  }'
+```
+</CodeGroup>
+
+Update bucket visibility settings (admin only).
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="isPublic" type="boolean" required>
+  Whether bucket should be publicly accessible
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Bucket visibility updated",
+  "bucket": "avatars",
+  "isPublic": false
+}
+```
+</ResponseExample>
+
+### Delete Bucket
+
+<CodeGroup>
+```bash DELETE /api/storage/buckets/{bucketName}
+curl -X DELETE https://your-app.region.insforge.app/api/storage/buckets/avatars \
+  -H "x-api-key: YOUR_API_KEY"
+```
+</CodeGroup>
+
+Delete bucket and all its objects (admin only).
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket to delete
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Bucket deleted successfully",
+  "nextActions": "You can use POST /api/storage/buckets to create a new bucket"
+}
+```
+</ResponseExample>
+
+---
+
+## File Operations
+
+### List Objects in Bucket
+
+<CodeGroup>
+```bash GET /api/storage/buckets/{bucketName}/objects
+curl "https://your-app.region.insforge.app/api/storage/buckets/avatars/objects?prefix=users/&limit=100&search=profile" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+</CodeGroup>
+
+List all objects in a bucket with filtering (admin only).
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="prefix" type="string">
+  Filter by key prefix (e.g., "users/")
+</ParamField>
+<ParamField query="limit" type="integer" default="100">
+  Maximum objects to return (1-1000)
+</ParamField>
+<ParamField query="offset" type="integer" default="0">
+  Number of objects to skip
+</ParamField>
+<ParamField query="search" type="string">
+  Search objects by key (partial match)
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "data": [
+    {
+      "bucket": "avatars",
+      "key": "users/user123.jpg",
+      "size": 102400,
+      "mimeType": "image/jpeg",
+      "uploadedAt": "2024-01-15T10:30:00Z",
+      "url": "/api/storage/buckets/avatars/objects/users/user123.jpg"
+    },
+    {
+      "bucket": "avatars",
+      "key": "users/user456.png",
+      "size": 204800,
+      "mimeType": "image/png",
+      "uploadedAt": "2024-01-16T11:00:00Z",
+      "url": "/api/storage/buckets/avatars/objects/users/user456.png"
+    }
+  ],
+  "pagination": {
+    "offset": 0,
+    "limit": 100,
+    "total": 2
+  }
+}
+```
+</ResponseExample>
+
+### Get Upload Strategy
+
+<CodeGroup>
+```bash POST /api/storage/buckets/{bucketName}/upload-strategy
+curl -X POST https://your-app.region.insforge.app/api/storage/buckets/avatars/upload-strategy \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "filename": "profile-photo.jpg",
+    "contentType": "image/jpeg",
+    "size": 102400
+  }'
+```
+</CodeGroup>
+
+Get upload strategy and presigned URLs (S3) or direct endpoint (local).
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="filename" type="string" required>
+  Original filename
+</ParamField>
+<ParamField body="contentType" type="string">
+  MIME type of the file
+</ParamField>
+<ParamField body="size" type="integer">
+  File size in bytes
+</ParamField>
+
+**Response**
+
+<Tabs>
+  <Tab title="S3 Backend">
+    <ResponseExample>
+    ```json
+    {
+      "method": "presigned",
+      "uploadUrl": "https://s3-bucket.amazonaws.com/",
+      "fields": {
+        "bucket": "my-s3-bucket",
+        "key": "app-key/avatars/profile-photo-1234567890-abc123.jpg",
+        "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+        "X-Amz-Credential": "AKIA.../20250905/us-east-2/s3/aws4_request",
+        "X-Amz-Date": "20250905T000000Z",
+        "Policy": "eyJ...",
+        "X-Amz-Signature": "abc123..."
+      },
+      "key": "profile-photo-1234567890-abc123.jpg",
+      "confirmRequired": true,
+      "confirmUrl": "/api/storage/buckets/avatars/objects/profile-photo-1234567890-abc123.jpg/confirm-upload",
+      "expiresAt": "2025-09-05T01:00:00Z"
+    }
+    ```
+    </ResponseExample>
+  </Tab>
+  <Tab title="Local Storage">
+    <ResponseExample>
+    ```json
+    {
+      "method": "direct",
+      "uploadUrl": "/api/storage/buckets/avatars/objects/profile-photo-1234567890-abc123.jpg",
+      "key": "profile-photo-1234567890-abc123.jpg",
+      "confirmRequired": false
+    }
+    ```
+    </ResponseExample>
+  </Tab>
+</Tabs>
+
+### Upload Object with Specific Key
+
+<CodeGroup>
+```bash PUT /api/storage/buckets/{bucketName}/objects/{objectKey}
+curl -X PUT https://your-app.region.insforge.app/api/storage/buckets/avatars/objects/user123.jpg \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@/path/to/image.jpg"
+```
+</CodeGroup>
+
+Upload a file with a specified key (path).
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+<ParamField path="objectKey" type="string" required>
+  Object key (can include slashes for pseudo-folders)
+</ParamField>
+
+**Body**
+
+Multipart form data with `file` field.
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "bucket": "avatars",
+  "key": "user123.jpg",
+  "size": 102400,
+  "mimeType": "image/jpeg",
+  "uploadedAt": "2024-01-21T10:30:00Z",
+  "url": "/api/storage/buckets/avatars/objects/user123.jpg"
+}
+```
+</ResponseExample>
+
+### Upload Object with Auto-Generated Key
+
+<CodeGroup>
+```bash POST /api/storage/buckets/{bucketName}/objects
+curl -X POST https://your-app.region.insforge.app/api/storage/buckets/avatars/objects \
+  -H "x-api-key: YOUR_API_KEY" \
+  -F "file=@/path/to/image.jpg"
+```
+</CodeGroup>
+
+Upload file with automatically generated unique key.
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+
+**Body**
+
+Multipart form data with `file` field.
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "bucket": "avatars",
+  "key": "image-1737546841234-a3f2b1.jpg",
+  "size": 102400,
+  "mimeType": "image/jpeg",
+  "uploadedAt": "2024-01-21T10:30:00Z",
+  "url": "/api/storage/buckets/avatars/objects/image-1737546841234-a3f2b1.jpg"
+}
+```
+</ResponseExample>
+
+### Confirm Presigned Upload
+
+<CodeGroup>
+```bash POST /api/storage/buckets/{bucketName}/objects/{objectKey}/confirm-upload
+curl -X POST https://your-app.region.insforge.app/api/storage/buckets/avatars/objects/profile-photo-123.jpg/confirm-upload \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "size": 102400,
+    "contentType": "image/jpeg",
+    "etag": "9bb58f26192e4ba00f01e2e7b136bbd8"
+  }'
+```
+</CodeGroup>
+
+Confirm successful S3 presigned upload.
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+<ParamField path="objectKey" type="string" required>
+  Object key from upload strategy
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="size" type="integer" required>
+  File size in bytes
+</ParamField>
+<ParamField body="contentType" type="string">
+  MIME type
+</ParamField>
+<ParamField body="etag" type="string">
+  S3 ETag of uploaded object
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "bucket": "avatars",
+  "key": "profile-photo-123.jpg",
+  "size": 102400,
+  "mimeType": "image/jpeg",
+  "uploadedAt": "2024-01-21T10:30:00Z",
+  "url": "/api/storage/buckets/avatars/objects/profile-photo-123.jpg"
+}
+```
+</ResponseExample>
+
+### Get Download Strategy
+
+<CodeGroup>
+```bash POST /api/storage/buckets/{bucketName}/objects/{objectKey}/download-strategy
+curl -X POST https://your-app.region.insforge.app/api/storage/buckets/avatars/objects/profile-photo.jpg/download-strategy \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "expiresIn": 3600
+  }'
+```
+</CodeGroup>
+
+Get download URL (direct for public buckets, presigned for private S3 buckets).
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+<ParamField path="objectKey" type="string" required>
+  Object key
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="expiresIn" type="integer" default="3600">
+  URL expiration time in seconds
+</ParamField>
+
+**Response**
+
+<Tabs>
+  <Tab title="S3 Public Bucket">
+    <ResponseExample>
+    ```json
+    {
+      "method": "direct",
+      "url": "https://s3-bucket.s3.us-east-2.amazonaws.com/app-key/public-assets/logo.png"
+    }
+    ```
+    </ResponseExample>
+  </Tab>
+  <Tab title="S3 Private Bucket">
+    <ResponseExample>
+    ```json
+    {
+      "method": "presigned",
+      "url": "https://s3-bucket.s3.us-east-2.amazonaws.com/app-key/avatars/profile.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...",
+      "expiresAt": "2025-09-05T01:00:00Z"
+    }
+    ```
+    </ResponseExample>
+  </Tab>
+  <Tab title="Local Storage">
+    <ResponseExample>
+    ```json
+    {
+      "method": "direct",
+      "url": "/api/storage/buckets/avatars/objects/profile-photo.jpg"
+    }
+    ```
+    </ResponseExample>
+  </Tab>
+</Tabs>
+
+### Download Object
+
+<CodeGroup>
+```bash GET /api/storage/buckets/{bucketName}/objects/{objectKey}
+curl https://your-app.region.insforge.app/api/storage/buckets/avatars/objects/user123.jpg \
+  -H "x-api-key: YOUR_API_KEY" \
+  -o downloaded-image.jpg
+```
+</CodeGroup>
+
+Download file content.
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+<ParamField path="objectKey" type="string" required>
+  Object key to download
+</ParamField>
+
+**Response**
+
+Binary file content with appropriate `Content-Type` and `Content-Length` headers.
+
+### Delete Object
+
+<CodeGroup>
+```bash DELETE /api/storage/buckets/{bucketName}/objects/{objectKey}
+curl -X DELETE https://your-app.region.insforge.app/api/storage/buckets/avatars/objects/user123.jpg \
+  -H "x-api-key: YOUR_API_KEY"
+```
+</CodeGroup>
+
+Delete an object from storage.
+
+**Path Parameters**
+
+<ParamField path="bucketName" type="string" required>
+  Name of the bucket
+</ParamField>
+<ParamField path="objectKey" type="string" required>
+  Object key to delete
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Object deleted successfully"
+}
+```
+</ResponseExample>

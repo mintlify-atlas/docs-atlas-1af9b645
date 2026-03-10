@@ -1,0 +1,262 @@
+---
+title: 'Pricing'
+description: 'InsForge pricing models: Cloud-hosted vs self-hosted options'
+---
+
+## Overview
+
+InsForge offers two deployment options to fit your needs:
+
+1. **Cloud-Hosted:** Fully managed service at [insforge.dev](https://insforge.dev)
+2. **Self-Hosted:** Free, open-source deployment on your own infrastructure
+
+## Cloud-Hosted (insforge.dev)
+
+### Benefits
+
+- **Zero Infrastructure Management:** We handle servers, scaling, and maintenance
+- **Automatic Updates:** Always running the latest version with security patches
+- **High Availability:** 99.9% uptime SLA with automatic failover
+- **Global CDN:** Fast content delivery worldwide
+- **Managed Backups:** Daily automated backups with point-in-time recovery
+- **Premium Support:** Priority email and Discord support
+- **Compliance:** SOC 2 Type II certified infrastructure
+
+### Pricing Tiers
+
+Visit [insforge.dev/pricing](https://insforge.dev/pricing) for current pricing details.
+
+**Typical cloud pricing includes:**
+
+- **Free Tier:** Ideal for prototypes and learning
+  - Limited API requests
+  - Basic authentication
+  - Community support
+  
+- **Pro Tier:** For production applications
+  - Higher rate limits
+  - Custom domains
+  - Email support
+  - Advanced analytics
+  
+- **Enterprise:** For large-scale deployments
+  - Dedicated resources
+  - SLA guarantees
+  - Custom integrations
+  - White-glove support
+
+### What's Included
+
+All cloud plans include:
+
+- PostgreSQL database with automatic scaling
+- PostgREST API layer
+- Authentication (email/password + OAuth)
+- File storage (S3-compatible)
+- Serverless functions (Deno runtime)
+- AI model gateway (OpenRouter integration)
+- SSL certificates
+- DDoS protection
+- Monitoring and logging
+
+## Self-Hosted (Free & Open Source)
+
+### Benefits
+
+- **100% Free:** No usage limits or hidden costs
+- **Full Control:** Complete access to source code and infrastructure
+- **Data Sovereignty:** Keep sensitive data on your own servers
+- **Customization:** Modify any component to fit your needs
+- **No Vendor Lock-In:** Export and migrate data anytime
+- **Private Deployment:** Run on-premises or in your private cloud
+
+### License
+
+**Apache License 2.0**
+
+- ✅ Commercial use allowed
+- ✅ Modification allowed
+- ✅ Distribution allowed
+- ✅ Private use allowed
+- ⚠️ Must include license and copyright notice
+- ⚠️ Changes must be documented
+
+Full license: [github.com/insforge/insforge/blob/main/LICENSE](https://github.com/insforge/insforge/blob/main/LICENSE)
+
+### Infrastructure Costs
+
+While InsForge is free, you'll pay for infrastructure:
+
+**Estimated Monthly Costs (AWS):**
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| **Compute** | $10-20 | $50-100 | EC2 t3.small → t3.large |
+| **Database** | $15-30 | $50-150 | RDS PostgreSQL |
+| **Storage** | $0.50-5 | $5-20 | S3 for files |
+| **Bandwidth** | $5-10 | $20-50 | Data transfer |
+| **Load Balancer** | $15-20 | $15-20 | Application LB |
+| **Total** | **$45-85** | **$140-340** | Per month |
+
+**Cost Optimization Tips:**
+
+1. **Start Small:** Use t3.micro for testing ($8/month)
+2. **Use Reserved Instances:** Save up to 40% with 1-year commitment
+3. **Enable Auto-Scaling:** Scale down during off-peak hours
+4. **CloudFront CDN:** Reduce bandwidth costs
+5. **Local Storage:** Use Docker volumes instead of S3 for dev
+
+### Alternative Hosting Providers
+
+**Budget-Friendly Options:**
+
+| Provider | Starting Price | Notes |
+|----------|---------------|-------|
+| **Railway** | $5/month | Easy one-click deploy |
+| **Zeabur** | $5/month | Built for developers |
+| **Sealos** | $3/month | Kubernetes-based |
+| **DigitalOcean** | $12/month | Droplets + managed DB |
+| **Hetzner** | $5/month | EU-based, cost-effective |
+| **OVHcloud** | $6/month | Global presence |
+
+See [Self-Hosting Guide](/platform/self-hosting) for detailed deployment instructions.
+
+## Feature Comparison
+
+| Feature | Cloud-Hosted | Self-Hosted |
+|---------|--------------|-------------|
+| **Setup Time** | < 5 minutes | 30-60 minutes |
+| **Maintenance** | Managed | Self-managed |
+| **Updates** | Automatic | Manual |
+| **Backups** | Automated | DIY |
+| **Scaling** | Automatic | Manual |
+| **Monitoring** | Included | Setup required |
+| **Support** | Priority | Community |
+| **SSL Certificates** | Included | Setup required |
+| **Compliance** | SOC 2 Type II | Your responsibility |
+| **Customization** | Limited | Full control |
+| **Data Location** | US/EU regions | Anywhere |
+| **API Limits** | Tier-based | Unlimited |
+| **Cost** | Monthly fee | Infrastructure only |
+
+## When to Choose Self-Hosted
+
+Consider self-hosting if:
+
+- ✅ **Compliance Requirements:** Need data in specific regions/on-premises
+- ✅ **Heavy Customization:** Want to modify core functionality
+- ✅ **Existing Infrastructure:** Already have servers and DevOps team
+- ✅ **Cost Optimization:** High usage makes self-hosting cheaper
+- ✅ **Learning/Education:** Want to understand the platform deeply
+- ✅ **Offline Access:** Need to work without internet connectivity
+
+## When to Choose Cloud-Hosted
+
+Choose cloud hosting if:
+
+- ✅ **Fast Time-to-Market:** Need to launch quickly
+- ✅ **No DevOps Team:** Don't want to manage infrastructure
+- ✅ **Automatic Scaling:** Traffic varies significantly
+- ✅ **Guaranteed Uptime:** Need SLA and support
+- ✅ **Focus on Product:** Want to focus on building, not infrastructure
+- ✅ **Small Team:** Limited technical resources
+
+## Hybrid Approach
+
+Many teams use both:
+
+1. **Development:** Self-hosted locally (Docker Compose)
+2. **Staging:** Self-hosted on cloud VM
+3. **Production:** Cloud-hosted for reliability
+
+This provides flexibility while ensuring production stability.
+
+## Migration Path
+
+### Cloud → Self-Hosted
+
+1. Export database: `pg_dump` from cloud instance
+2. Export storage files via S3 sync
+3. Deploy self-hosted instance
+4. Import database and files
+5. Update DNS and test
+
+### Self-Hosted → Cloud
+
+1. Sign up at [insforge.dev](https://insforge.dev)
+2. Create new project
+3. Import database schema and data
+4. Upload storage files
+5. Update application connection strings
+6. Test thoroughly before switching DNS
+
+**Note:** InsForge data is portable. You can migrate between deployment options without code changes.
+
+## Support Options
+
+### Cloud-Hosted Support
+
+- **Free Tier:** Community Discord support
+- **Pro Tier:** Email support (24-hour response)
+- **Enterprise:** Dedicated Slack channel, phone support
+
+### Self-Hosted Support
+
+- **Community:** Free Discord support from community
+- **Professional Services:** Paid consulting for custom deployments
+- **Enterprise Support:** Optional paid support contracts
+
+Join Discord: [discord.com/invite/MPxwj5xVvW](https://discord.com/invite/MPxwj5xVvW)
+
+## Frequently Asked Questions
+
+<AccordionGroup>
+  <Accordion title="Can I try cloud-hosted before committing?">
+    Yes! We offer a free tier with no credit card required. Perfect for testing and prototyping.
+  </Accordion>
+
+  <Accordion title="Is self-hosted really free?">
+    The software is 100% free (Apache 2.0 license). You only pay for infrastructure costs (servers, database, storage).
+  </Accordion>
+
+  <Accordion title="Can I switch from self-hosted to cloud later?">
+    Absolutely! Your data is portable. We can assist with migration for paid plans.
+  </Accordion>
+
+  <Accordion title="What if I need custom features?">
+    Self-hosted: Modify the code yourself (open source).
+    Cloud: Contact us for enterprise custom development.
+  </Accordion>
+
+  <Accordion title="How do updates work for self-hosted?">
+    You control when to update. Pull the latest Docker images or git repository when ready. See [GitHub releases](https://github.com/insforge/insforge/releases).
+  </Accordion>
+
+  <Accordion title="Can I get support for self-hosted deployments?">
+    Community support is free via Discord. We also offer paid professional services for custom deployments and ongoing support.
+  </Accordion>
+</AccordionGroup>
+
+## Get Started
+
+### Try Cloud-Hosted
+
+1. Visit [insforge.dev](https://insforge.dev)
+2. Sign up for free account
+3. Create your first project
+4. Follow onboarding wizard
+
+### Deploy Self-Hosted
+
+1. Read [Self-Hosting Guide](/platform/self-hosting)
+2. Install Docker and Docker Compose
+3. Clone repository and configure `.env`
+4. Run `docker compose up -d`
+
+## Contact Sales
+
+For enterprise pricing or questions:
+
+- **Email:** info@insforge.dev
+- **Discord:** [discord.com/invite/MPxwj5xVvW](https://discord.com/invite/MPxwj5xVvW)
+- **Schedule Call:** [insforge.dev/contact](https://insforge.dev/contact)

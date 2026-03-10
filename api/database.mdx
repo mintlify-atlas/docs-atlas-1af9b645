@@ -1,0 +1,622 @@
+---
+title: Database API
+description: Database table management and record operations with PostgREST-style querying
+---
+
+The Database API provides comprehensive table schema management and CRUD operations for records with powerful filtering, sorting, and pagination.
+
+## Base URL
+
+All database endpoints are prefixed with `/api/database`
+
+---
+
+## Table Management
+
+### List Tables
+
+<CodeGroup>
+```bash GET /api/database/tables
+curl https://your-app.region.insforge.app/api/database/tables \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve list of all table names (admin only).
+
+**Response**
+
+<ResponseExample>
+```json
+[
+  "posts",
+  "comments",
+  "categories"
+]
+```
+</ResponseExample>
+
+### Create Table
+
+<CodeGroup>
+```bash POST /api/database/tables
+curl -X POST https://your-app.region.insforge.app/api/database/tables \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tableName": "posts",
+    "rlsEnabled": false,
+    "columns": [
+      {
+        "name": "title",
+        "type": "string",
+        "nullable": false
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "nullable": true
+      },
+      {
+        "name": "published",
+        "type": "boolean",
+        "nullable": false,
+        "defaultValue": "false"
+      },
+      {
+        "name": "userId",
+        "type": "uuid",
+        "nullable": false,
+        "foreignKey": {
+          "table": "auth.users",
+          "column": "id",
+          "onDelete": "CASCADE"
+        }
+      }
+    ]
+  }'
+```
+</CodeGroup>
+
+Create a new table with columns and constraints (admin only).
+
+**Body Parameters**
+
+<ParamField body="tableName" type="string" required>
+  Name of the table to create
+</ParamField>
+<ParamField body="rlsEnabled" type="boolean" default="false">
+  Enable Row Level Security on the table
+</ParamField>
+<ParamField body="columns" type="array" required>
+  Array of column definitions
+  <Expandable title="Column properties">
+    <ParamField body="name" type="string" required>
+      Column name
+    </ParamField>
+    <ParamField body="type" type="string" required>
+      Data type: `string`, `datetime`, `integer`, `float`, `boolean`, `uuid`, `json`, `file`
+    </ParamField>
+    <ParamField body="nullable" type="boolean" required>
+      Whether column allows NULL values
+    </ParamField>
+    <ParamField body="unique" type="boolean">
+      Whether column values must be unique
+    </ParamField>
+    <ParamField body="defaultValue" type="string">
+      Default value for the column
+    </ParamField>
+    <ParamField body="foreignKey" type="object">
+      Foreign key constraint
+      <Expandable title="Foreign key properties">
+        <ParamField body="table" type="string" required>
+          Referenced table name
+        </ParamField>
+        <ParamField body="column" type="string" required>
+          Referenced column name
+        </ParamField>
+        <ParamField body="onDelete" type="string" default="NO ACTION">
+          Action on delete: `CASCADE`, `SET NULL`, `NO ACTION`, `RESTRICT`
+        </ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Table created successfully",
+  "tableName": "posts"
+}
+```
+</ResponseExample>
+
+### Get Table Schema
+
+<CodeGroup>
+```bash GET /api/database/tables/{tableName}/schema
+curl https://your-app.region.insforge.app/api/database/tables/posts/schema \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Retrieve complete schema information for a table (admin only).
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "tableName": "posts",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "unique": true,
+      "default": "gen_random_uuid()",
+      "isPrimaryKey": true,
+      "foreignKey": null
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "nullable": false,
+      "unique": false,
+      "default": null,
+      "isPrimaryKey": false,
+      "foreignKey": null
+    },
+    {
+      "name": "userId",
+      "type": "uuid",
+      "nullable": false,
+      "unique": false,
+      "default": null,
+      "isPrimaryKey": false,
+      "foreignKey": {
+        "table": "auth.users",
+        "column": "id",
+        "on_delete": "CASCADE"
+      }
+    },
+    {
+      "name": "createdAt",
+      "type": "datetime",
+      "nullable": false,
+      "unique": false,
+      "default": "now()",
+      "isPrimaryKey": false,
+      "foreignKey": null
+    }
+  ]
+}
+```
+</ResponseExample>
+
+### Update Table Schema
+
+<CodeGroup>
+```bash PATCH /api/database/tables/{tableName}/schema
+curl -X PATCH https://your-app.region.insforge.app/api/database/tables/posts/schema \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "addColumns": [
+      {
+        "columnName": "views",
+        "type": "integer",
+        "isNullable": false,
+        "defaultValue": "0"
+      }
+    ],
+    "updateColumns": [
+      {
+        "columnName": "title",
+        "newColumnName": "post_title"
+      }
+    ],
+    "addForeignKeys": [
+      {
+        "columnName": "categoryId",
+        "foreignKey": {
+          "referenceTable": "categories",
+          "referenceColumn": "id",
+          "onDelete": "SET NULL"
+        }
+      }
+    ]
+  }'
+```
+</CodeGroup>
+
+Modify table schema by adding/dropping/updating columns and constraints (admin only).
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table to modify
+</ParamField>
+
+**Body Parameters**
+
+<ParamField body="addColumns" type="array">
+  Add new columns
+  <Expandable title="properties">
+    <ParamField body="columnName" type="string" required>
+      Name of the new column
+    </ParamField>
+    <ParamField body="type" type="string" required>
+      Data type: `string`, `integer`, `float`, `boolean`, `datetime`, `uuid`, `json`, `file`
+    </ParamField>
+    <ParamField body="isNullable" type="boolean" default="true">
+      Whether column allows NULL
+    </ParamField>
+    <ParamField body="isUnique" type="boolean" default="false">
+      Whether values must be unique
+    </ParamField>
+    <ParamField body="defaultValue" type="string">
+      Default value
+    </ParamField>
+  </Expandable>
+</ParamField>
+<ParamField body="dropColumns" type="array">
+  Column names to drop
+</ParamField>
+<ParamField body="updateColumns" type="array">
+  Modify existing columns
+  <Expandable title="properties">
+    <ParamField body="columnName" type="string" required>
+      Current column name
+    </ParamField>
+    <ParamField body="newColumnName" type="string">
+      New name for column
+    </ParamField>
+    <ParamField body="defaultValue" type="string">
+      New default value
+    </ParamField>
+  </Expandable>
+</ParamField>
+<ParamField body="addForeignKeys" type="array">
+  Add foreign key constraints
+</ParamField>
+<ParamField body="dropForeignKeys" type="array">
+  Column names with foreign keys to drop
+</ParamField>
+<ParamField body="renameTable" type="object">
+  Rename the table
+  <Expandable title="properties">
+    <ParamField body="newTableName" type="string" required>
+      New table name
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Table schema updated successfully",
+  "tableName": "posts",
+  "operations": [
+    "added 1 columns",
+    "renamed 1 columns",
+    "added 1 foreign keys"
+  ]
+}
+```
+</ResponseExample>
+
+### Delete Table
+
+<CodeGroup>
+```bash DELETE /api/database/tables/{tableName}
+curl -X DELETE https://your-app.region.insforge.app/api/database/tables/posts \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Permanently delete a table and all its data (admin only).
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table to delete
+</ParamField>
+
+**Response**
+
+<ResponseExample>
+```json
+{
+  "message": "Table deleted successfully",
+  "tableName": "posts"
+}
+```
+</ResponseExample>
+
+---
+
+## Record Operations
+
+### Query Records
+
+<CodeGroup>
+```bash GET /api/database/records/{tableName}
+# Basic query
+curl https://your-app.region.insforge.app/api/database/records/posts \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# With filters and sorting
+curl "https://your-app.region.insforge.app/api/database/records/posts?status=eq.published&limit=10&order=createdAt.desc&select=id,title,content" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+</CodeGroup>
+
+Query records with PostgREST-style filtering, sorting, and pagination.
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table to query
+</ParamField>
+
+**Query Parameters**
+
+<ParamField query="limit" type="integer" default="100">
+  Maximum number of records (1-1000)
+</ParamField>
+<ParamField query="offset" type="integer" default="0">
+  Number of records to skip
+</ParamField>
+<ParamField query="order" type="string">
+  Sort order (e.g., "createdAt.desc", "name.asc")
+</ParamField>
+<ParamField query="select" type="string">
+  Comma-separated columns to return
+</ParamField>
+<ParamField query="field" type="string">
+  PostgREST-style filters (e.g., "status=eq.active", "age=gt.18")
+  
+  **Filter operators:**
+  - `eq` - equals
+  - `neq` - not equals
+  - `gt` - greater than
+  - `gte` - greater than or equal
+  - `lt` - less than
+  - `lte` - less than or equal
+  - `like` - pattern match
+  - `ilike` - case-insensitive pattern match
+  - `in` - in list
+  - `is` - is null/not null
+</ParamField>
+
+**Response Headers**
+
+<ResponseField name="X-Total-Count" type="integer">
+  Total number of matching records
+</ResponseField>
+<ResponseField name="Content-Range" type="string">
+  Range of returned records (e.g., "0-99/1234")
+</ResponseField>
+
+**Response**
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "248373e1-0aea-45ce-8844-5ef259203749",
+    "title": "Getting Started with InsForge",
+    "content": "This is a guide to help you get started...",
+    "published": true,
+    "createdAt": "2025-07-18T05:37:24.338Z",
+    "updatedAt": "2025-07-18T05:37:24.338Z"
+  },
+  {
+    "id": "348373e1-0aea-45ce-8844-5ef259203750",
+    "title": "Advanced Database Queries",
+    "content": "Learn how to write complex queries...",
+    "published": true,
+    "createdAt": "2025-07-19T08:15:10.123Z",
+    "updatedAt": "2025-07-19T08:15:10.123Z"
+  }
+]
+```
+</ResponseExample>
+
+### Create Records
+
+<CodeGroup>
+```bash POST /api/database/records/{tableName}
+# Create single record
+curl -X POST https://your-app.region.insforge.app/api/database/records/posts \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation" \
+  -d '[{
+    "title": "My First Post",
+    "content": "Hello world! This is my first post.",
+    "published": true
+  }]'
+
+# Create multiple records
+curl -X POST https://your-app.region.insforge.app/api/database/records/posts \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation" \
+  -d '[{
+    "title": "Post 1",
+    "content": "Content 1",
+    "published": false
+  },
+  {
+    "title": "Post 2",
+    "content": "Content 2",
+    "published": true
+  }]'
+```
+</CodeGroup>
+
+Create one or more records. **Request body must be an array.**
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table
+</ParamField>
+
+**Headers**
+
+<ParamField header="Prefer" type="string">
+  Set to `return=representation` to return created records (otherwise returns empty array)
+</ParamField>
+
+**Body**
+
+Array of objects with field values matching table schema.
+
+**Response**
+
+<ResponseExample>
+```json Without Prefer header
+[]
+```
+
+```json With Prefer: return=representation
+[
+  {
+    "id": "248373e1-0aea-45ce-8844-5ef259203749",
+    "title": "My First Post",
+    "content": "Hello world! This is my first post.",
+    "published": true,
+    "createdAt": "2025-07-18T05:37:24.338Z",
+    "updatedAt": "2025-07-18T05:37:24.338Z"
+  }
+]
+```
+</ResponseExample>
+
+### Update Records
+
+<CodeGroup>
+```bash PATCH /api/database/records/{tableName}
+# Update by ID
+curl -X PATCH "https://your-app.region.insforge.app/api/database/records/posts?id=eq.248373e1-0aea-45ce-8844-5ef259203749" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: return=representation" \
+  -d '{
+    "title": "Updated Post Title",
+    "content": "This content has been updated."
+  }'
+
+# Update with filter
+curl -X PATCH "https://your-app.region.insforge.app/api/database/records/posts?published=eq.false" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "published": true
+  }'
+```
+</CodeGroup>
+
+Update records matching query filters.
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table
+</ParamField>
+
+**Query Parameters**
+
+Use PostgREST-style filters (e.g., `id=eq.123`, `status=eq.draft`)
+
+**Headers**
+
+<ParamField header="Prefer" type="string">
+  Set to `return=representation` to return updated records
+</ParamField>
+
+**Body**
+
+Object with fields to update.
+
+**Response**
+
+<ResponseExample>
+```json With Prefer: return=representation
+[
+  {
+    "id": "248373e1-0aea-45ce-8844-5ef259203749",
+    "title": "Updated Post Title",
+    "content": "This content has been updated.",
+    "published": true,
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-21T11:00:00Z"
+  }
+]
+```
+</ResponseExample>
+
+### Delete Records
+
+<CodeGroup>
+```bash DELETE /api/database/records/{tableName}
+# Delete by ID
+curl -X DELETE "https://your-app.region.insforge.app/api/database/records/posts?id=eq.248373e1-0aea-45ce-8844-5ef259203749" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Delete with filter
+curl -X DELETE "https://your-app.region.insforge.app/api/database/records/posts?published=eq.false" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Prefer: return=representation"
+```
+</CodeGroup>
+
+Delete records matching query filters.
+
+**Path Parameters**
+
+<ParamField path="tableName" type="string" required>
+  Name of the table
+</ParamField>
+
+**Query Parameters**
+
+Use PostgREST-style filters to select records to delete.
+
+**Headers**
+
+<ParamField header="Prefer" type="string">
+  Set to `return=representation` to return deleted records
+</ParamField>
+
+**Response**
+
+- Without `Prefer` header: 204 No Content
+- With `Prefer: return=representation`: Array of deleted records
+
+<ResponseExample>
+```json With Prefer: return=representation
+[
+  {
+    "id": "248373e1-0aea-45ce-8844-5ef259203749",
+    "title": "Deleted Post",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-21T11:00:00Z"
+  }
+]
+```
+</ResponseExample>
